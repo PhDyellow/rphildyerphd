@@ -1,12 +1,14 @@
-Package: phildyerphd
-Title: What the Package Does (One Line, Title Case)
+Package: rphildyerphd
+Title: R functions for Phil Dyers PhD
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Phil",
+           family = "Dyer",
            role = c("aut", "cre"),
-           email = "first.last@example.com")
-Description: What the package does (one paragraph).
-License: What license it uses
+           email = "philip.dyer1@uqconnect.edu.au")
+Description: A collection of functions that are useful in my PhD. I will break out feature sets that are generally useful to others When I see a need.
+Imports:
+Suggests:
+License: GPL-3
 Encoding: UTF-8
 LazyData: true
