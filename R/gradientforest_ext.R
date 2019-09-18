@@ -248,3 +248,85 @@ compress_extrap_z <- function(x, p, a, b){
 
 }
 
+
+#I need to cluster with a combination of MVPART, F-ratio and confusion matrix.
+#That sounds like at least 4 functions, and MVPART feeds into F-ratio and confusion matrix. The 4th function is an integrator function
+
+#' Gradient Forest MVPART
+#'
+#' Apply an MVPART analysis to a dataset that is also being passed to Gradient Forest
+#'
+#' @param gf A GF model, not a combined GF model though
+#'
+#' @return factor mapping between leaf nodes and samples sites. Each entry is a sample site, each level is a leaf node.
+#'
+#' @export
+#'
+#' @examples
+#'
+#' if (requireNamespace("gradientForest", quietly = TRUE)) {
+#' library(gradientForest) #required to attach extendedForest
+#' set.seed(1001)
+#'
+#' species_dep <- matrix(runif(144, -5, 20), 9, 16)
+#'
+#' env_samp <- matrix(runif(900, 1, 2), 100, 9)
+#'
+#' species_response <- env_samp %*% species_dep
+#' species_abundance <- data.frame(matrix(rpois(length(as.vector(species_response)), as.vector(species_response)), 100, 16))
+#' names(species_abundance) <- LETTERS[1:16]
+#'
+#' env_samp <- as.data.frame(env_samp)
+#' names(env_samp) <- letters[1:9]
+#'
+#' gf1 <- gradientForest::gradientForest(
+#'     cbind(env_samp, species_abundance),
+#'     letters[1:9],
+#'     LETTERS[1:8]
+#' )
+#' gf2 <- gradientForest::gradientForest(
+#'     cbind(env_samp, species_abundance),
+#'     letters[1:9],
+#'     LETTERS[1:8 + 8]
+#' )
+#'
+#' gf3 <- gradientForest::combinedGradientForest(west = gf1, east = gf2)
+#'
+#' #The returned object is not trivial or easy to construct in other ways, so testing with hash functions.
+#' testthat::expect_known_hash(gf_mvpart(gf1), "367344f0")
+#' testthat::expect_known_hash(gf_mvpart(gf2), "53fa3cca")
+#' testthat::expect_error(gf_mvpart(gf3), "class(gf)[1] not equal to \"gradientForest\"", fixed = TRUE)
+#' }
+
+gf_mvpart <- function(gf){
+  assertthat::assert_that(assertthat::are_equal(class(gf)[1], "gradientForest"))
+
+  x <- gf$X
+  y <- gf$Y
+
+  y <- sapply(y, function(y_col){
+    unclass(y_col)
+  })
+
+  spp <- names(gf$result)
+  y <- y[,spp]
+  y <- as.matrix(y)
+
+  mvp <- mvpart::mvpart(y ~ .,
+                x,
+                xv=c("1se", "min")[1],
+                xval=10,
+                xvmult=10,
+                xvse=1,
+                plot.add=TRUE,
+                text.add=TRUE,
+                pretty=TRUE)
+
+  #only terminal nodes appear in mvp$where, but other nodes occupy id slots leading to "missing" id numbers
+  #relevel to avoid confusion over "missing" nodes by end users
+  fac <- factor(mvp$where)
+  levels(fac) <- 1:nlevels(fac)
+  return(fac)
+
+}
+

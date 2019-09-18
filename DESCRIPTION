@@ -8,8 +8,10 @@ Authors@R:
            email = "philip.dyer1@uqconnect.edu.au")
 Description: A collection of functions that are useful in my PhD. I will break out feature sets that are generally useful to others When I see a need.
 Imports:
-  assertthat
+  assertthat,
+  vegan
 Suggests:
+  mvpart 
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
