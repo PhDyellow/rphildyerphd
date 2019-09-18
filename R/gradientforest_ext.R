@@ -293,8 +293,8 @@ compress_extrap_z <- function(x, p, a, b){
 #' gf3 <- gradientForest::combinedGradientForest(west = gf1, east = gf2)
 #'
 #' #The returned object is not trivial or easy to construct in other ways, so testing with hash functions.
-#' testthat::expect_known_hash(gf_mvpart(gf1), "367344f0")
-#' testthat::expect_known_hash(gf_mvpart(gf2), "53fa3cca")
+#' testthat::expect_known_hash(gf_mvpart(gf1), "0b7d05ed")
+#' testthat::expect_known_hash(gf_mvpart(gf2), "02c9ba96")
 #' testthat::expect_error(gf_mvpart(gf3), "class(gf)[1] not equal to \"gradientForest\"", fixed = TRUE)
 #' }
 
