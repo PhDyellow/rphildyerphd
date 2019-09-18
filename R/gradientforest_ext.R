@@ -126,18 +126,39 @@ gf_extrap_compress <- function(gf,
   } else if (class(gf)[1] == "gradientForest") {
     max_cum_imp <- importance(gf, type = gf_importance_type, sort = TRUE)
   }
+  min_cum_imp <- as.numeric(predict(gf , as.data.frame(t(apply(gf$X, 2, min))-1), extrap = FALSE, ...)[names(max_cum_imp)])
+  names(min_cum_imp) <- names(max_cum_imp)
+
+
 
   env_compress <- sapply(names(max_cum_imp), env_extrap = env_extrap, function(varX, env_extrap) {
     tmp <- env_extrap[ , varX]
     upper_extremes <- tmp > max_cum_imp[varX]
-    tmp[upper_extremes] <- (tmp[upper_extremes]/max_cum_imp[varX])^pow * max_cum_imp[varX] # ratio is preferable to #tmp[ex_i] <- (tmp[ex_i]+1)^0.25 - (max_cum_imp[varX]+1)^0.25 + max_cum_imp[varX]
+    #tmp[upper_extremes] <- (tmp[upper_extremes]/max_cum_imp[varX])^pow * max_cum_imp[varX] # ratio is preferable to #tmp[ex_i] <- (tmp[ex_i]+1)^0.25 - (max_cum_imp[varX]+1)^0.25 + max_cum_imp[varX]
+    diff <- abs(tmp[upper_extremes] - max_cum_imp[varX])
+    tmp[upper_extremes] <- diff^pow + max_cum_imp[varX]
 
-    lower_extremes <- tmp < 0
+    lower_extremes <- tmp < min_cum_imp[varX]
+    #Roland has done:
+    #negate lower extreme (which is likely negative)
+    #add 1, so that "ratio" becomes 1 at min, and larger at smaller values
+    #power of ratio, which compresses towards 1
+    #remove 1, to undo offset
+    #negate again.
+
+    # I want the negative equivalent of the positive direction
+    # which should be
+    #diff <- |linear extrap - capped |
+    #diff^pow
+    #compress = capped + diff
+    diff <- (min_cum_imp[varX] - tmp[lower_extremes])
+    tmp[upper_extremes] <- diff^pow + max_cum_imp[varX]
+
     tmp[lower_extremes] <- -((-tmp[lower_extremes]+1)^pow - 1)
     return(tmp)
   })
   env_compress <- as.data.frame(env_compress)
-
+  return(env_compress)
 
 }
 
