@@ -54,42 +54,52 @@
 #'     LETTERS[1:8]
 #' )
 #'
-#' env_grid_upper <- matrix(runif(9000, 1, 3), 1000, 9)
+#' env_grid_upper <- matrix(runif(9000, 1.1, 3), 1000, 9)
 #' env_grid_upper <- as.data.frame(env_grid_upper)
 #' names(env_grid_upper) <- letters[1:9]
-#' env_grid_lower <- matrix(runif(9000, 0, 2), 1000, 9)
+#' env_grid_lower <- matrix(runif(9000, 0, 1.8), 1000, 9)
 #' env_grid_lower <- as.data.frame(env_grid_lower)
 #' names(env_grid_lower) <- letters[1:9]
 #'
 #' #Testing upper extremes
+#'
+#' ##Extrapolating
+#' pred_extrap <- predict(gf, env_grid_upper, extrap = TRUE)
+#' compress_extrap <- gf_extrap_compress(gf, env_grid_upper, pow = 1)
+#' plot(env_grid_upper$b , pred_extrap$b - compress_extrap$b)
+#' plot(env_grid_upper$c , pred_extrap$c - compress_extrap$c)
+#' plot(env_grid_upper$c , 2*pred_extrap$c - compress_extrap$c)
+#' plot(env_grid_upper$c , pred_extrap$c)
+#' testthat::expect_equal(as.data.frame(pred_extrap), as.data.frame(compress_extrap))
+#'print("here")
 #' ##Capping
 #' pred_cap <- predict(gf, env_grid_upper, extrap = FALSE)
 #' compress_cap <- gf_extrap_compress(gf, env_grid_upper, 0)
-#' testthat::expect_equal(as.data.frame(pred_cap), as.data.frame(compress_cap))
+#' print(head(as.data.frame(pred_cap[,names(compress_cap)])))
+#' print(head(compress_cap))
+#' pred_cap[80,names(compress_cap)] - compress_cap[80,]
 #'
-#' ##Extrapolating
-#' pred_extrap <- predict(gf, env_grid_upper, extrap = FALSE)
-#' compress_extrap <- gf_extrap_compress(gf, env_grid_upper, 1)
-#' testthat::expect_equal(as.data.frame(pred_cap), as.data.frame(compress_cap))
+#' testthat::expect_equal(as.data.frame(pred_cap[,names(compress_cap)]), as.data.frame(compress_cap), tolerance = 1e-8)
+#'print("hello")
 #'
 #' ##Compression
 #' compress_compress <- gf_extrap_compress(gf, env_grid_upper, 0.25)
 #' #Here, extremes should lie between pred_cap and pred_extrap
-#' testthat::expect_true(all(compress_compress >= pred_cap & compress_compress <= pred_extrap))
-#'
-#' hist(compress_compress$a, breaks = seq(-0.05, 0.05, 0.005), ylim = c(0, 250))
-#' hist(pred_extrap$a, breaks = seq(-0.05, 0.05, 0.005), ylim = c(0,250))
+#' testthat::expect_true(all(compress_compress >= pred_cap[,names(compress_cap)] & compress_compress <= pred_extrap[,names(compress_cap)]))
+#'print("hello")
+#' hist(compress_compress$a, breaks = seq(-0.05, 0.05, 0.005), ylim = c(0, 600))
+#' hist(pred_extrap$a, breaks = seq(-0.05, 0.05, 0.005), ylim = c(0,600))
 #'
 #' #' #Testing lower extremes
 #' ##Capping
 #' pred_cap <- predict(gf, env_grid_lower, extrap = FALSE)
 #' compress_cap <- gf_extrap_compress(gf, env_grid_lower, 0)
-#' testthat::expect_equal(as.data.frame(pred_cap), as.data.frame(compress_cap))
-#'
+#' testthat::expect_equal(as.data.frame(pred_cap[,names(compress_cap)]), as.data.frame(compress_cap), tolerance = 1e-4)
+#'pred_cap[,names(compress_cap)] - compress_cap
 #' ##Extrapolating
-#' pred_extrap <- predict(gf, env_grid_lower, extrap = FALSE)
+#' pred_extrap <- predict(gf, env_grid_lower, extrap = TRUE)
 #' compress_extrap <- gf_extrap_compress(gf, env_grid_lower, 1)
-#' testthat::expect_equal(as.data.frame(pred_cap), as.data.frame(compress_cap))
+#' testthat::expect_equal(as.data.frame(pred_extrap[,names(compress_cap)]), as.data.frame(compress_extrap))
 #'
 #' ##Compression
 #' compress_compress <- gf_extrap_compress(gf, env_grid_lower, 0.25)
@@ -113,50 +123,30 @@ gf_extrap_compress <- function(gf,
     stop("gf_extrap_compress: power must lie between 0 and 1")
   }
 
+
   env_extrap <- predict(gf, env_grid, extrap = TRUE, ...)
 
-  #Rolands code
-  # xrange <- range(Phys_grid[ ,varX]) #find range before transformation# Not used for curbing, just plotting
-  # tmp <- Trns_grid[,varX] #get vector after transformation
-  # ex_i <- tmp > max_cum_imp[varX] #max_cum_imp is already calculated. find values that exceed the max
-  # tmp[ex_i] <- (tmp[ex_i]/max_cum_imp[varX])^0.25 * max_cum_imp[varX] # ratio is preferable to #tmp[ex_i] <- (tmp[ex_i]+1)^0.25 - (max_cum_imp[varX]+1)^0.25 + max_cum_imp[varX]
+  env_compress <- sapply(names(env_grid), env_extrap = env_extrap, function(varX, env_extrap) {
+    tmp_y <- env_extrap[ , varX]
+    tmp_x <- env_grid[, varX]
+    #to compress extremes, I need x cap, y cap, extrapolation gradient
+    #Adapted from gradientForest::predict.gradientForest()
+    ci <- cumimp(gf, varX, ...)
+    x_range <- range(ci$x)
+    y_range <- range(ci$y)
+    grad <- 2*diff(yold) / diff(xold)
+    #x_cap_upper <- xold[2]
+    #y_cap_upper <- yold[2]
 
-  if(class(gf)[1] == "combinedGradientForest" ) {
-    max_cum_imp <- importance(gf, type = gf_importance_type, weight = gf_weight, sort = TRUE)
-  } else if (class(gf)[1] == "gradientForest") {
-    max_cum_imp <- importance(gf, type = gf_importance_type, sort = TRUE)
-  }
-  min_cum_imp <- as.numeric(predict(gf , as.data.frame(t(apply(gf$X, 2, min))-1), extrap = FALSE, ...)[names(max_cum_imp)])
-  names(min_cum_imp) <- names(max_cum_imp)
+    upper_extremes <- tmp_x > x_range[2]
+    tmp_y[upper_extremes] <- rphildyerphd:::compress_extrap_z(tmp_x[upper_extremes] - x_range[2], pow, grad, y_range[2])
 
-
-
-  env_compress <- sapply(names(max_cum_imp), env_extrap = env_extrap, function(varX, env_extrap) {
-    tmp <- env_extrap[ , varX]
-    upper_extremes <- tmp > max_cum_imp[varX]
-    #tmp[upper_extremes] <- (tmp[upper_extremes]/max_cum_imp[varX])^pow * max_cum_imp[varX] # ratio is preferable to #tmp[ex_i] <- (tmp[ex_i]+1)^0.25 - (max_cum_imp[varX]+1)^0.25 + max_cum_imp[varX]
-    diff <- abs(tmp[upper_extremes] - max_cum_imp[varX])
-    tmp[upper_extremes] <- diff^pow + max_cum_imp[varX]
-
-    lower_extremes <- tmp < min_cum_imp[varX]
-    #Roland has done:
-    #negate lower extreme (which is likely negative)
-    #add 1, so that "ratio" becomes 1 at min, and larger at smaller values
-    #power of ratio, which compresses towards 1
-    #remove 1, to undo offset
-    #negate again.
-
-    # I want the negative equivalent of the positive direction
-    # which should be
-    #diff <- |linear extrap - capped |
-    #diff^pow
-    #compress = capped + diff
-    diff <- (min_cum_imp[varX] - tmp[lower_extremes])
-    tmp[upper_extremes] <- diff^pow + max_cum_imp[varX]
-
-    tmp[lower_extremes] <- -((-tmp[lower_extremes]+1)^pow - 1)
-    return(tmp)
+    lower_extremes <- tmp_x < x_range[1]
+    tmp_y[lower_extremes] <- rphildyerphd:::compress_extrap_z( x_range[1] - tmp_x[lower_extremes], pow, grad, -y_range[1])
+    tmp_y[lower_extremes] <- -tmp_y[lower_extremes]
+    return(tmp_y)
   })
+
   env_compress <- as.data.frame(env_compress)
   return(env_compress)
 
