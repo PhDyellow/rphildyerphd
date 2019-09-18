@@ -66,27 +66,19 @@
 #' ##Extrapolating
 #' pred_extrap <- predict(gf, env_grid_upper, extrap = TRUE)
 #' compress_extrap <- gf_extrap_compress(gf, env_grid_upper, pow = 1)
-#' plot(env_grid_upper$b , pred_extrap$b - compress_extrap$b)
-#' plot(env_grid_upper$c , pred_extrap$c - compress_extrap$c)
-#' plot(env_grid_upper$c , 2*pred_extrap$c - compress_extrap$c)
-#' plot(env_grid_upper$c , pred_extrap$c)
 #' testthat::expect_equal(as.data.frame(pred_extrap), as.data.frame(compress_extrap))
-#'print("here")
+#'
 #' ##Capping
 #' pred_cap <- predict(gf, env_grid_upper, extrap = FALSE)
 #' compress_cap <- gf_extrap_compress(gf, env_grid_upper, 0)
-#' print(head(as.data.frame(pred_cap[,names(compress_cap)])))
-#' print(head(compress_cap))
-#' pred_cap[80,names(compress_cap)] - compress_cap[80,]
 #'
-#' testthat::expect_equal(as.data.frame(pred_cap[,names(compress_cap)]), as.data.frame(compress_cap), tolerance = 1e-8)
-#'print("hello")
+#' testthat::expect_equal(as.data.frame(pred_cap), as.data.frame(compress_cap))
 #'
 #' ##Compression
 #' compress_compress <- gf_extrap_compress(gf, env_grid_upper, 0.25)
 #' #Here, extremes should lie between pred_cap and pred_extrap
 #' testthat::expect_true(all(compress_compress >= pred_cap[,names(compress_cap)] & compress_compress <= pred_extrap[,names(compress_cap)]))
-#'print("hello")
+#'
 #' hist(compress_compress$a, breaks = seq(-0.05, 0.05, 0.005), ylim = c(0, 600))
 #' hist(pred_extrap$a, breaks = seq(-0.05, 0.05, 0.005), ylim = c(0,600))
 #'
@@ -95,7 +87,7 @@
 #' pred_cap <- predict(gf, env_grid_lower, extrap = FALSE)
 #' compress_cap <- gf_extrap_compress(gf, env_grid_lower, 0)
 #' testthat::expect_equal(as.data.frame(pred_cap[,names(compress_cap)]), as.data.frame(compress_cap), tolerance = 1e-4)
-#'pred_cap[,names(compress_cap)] - compress_cap
+#'
 #' ##Extrapolating
 #' pred_extrap <- predict(gf, env_grid_lower, extrap = TRUE)
 #' compress_extrap <- gf_extrap_compress(gf, env_grid_lower, 1)
@@ -106,8 +98,8 @@
 #' #Here, extremes should lie between pred_cap and pred_extrap
 #' testthat::expect_true(all(compress_compress <= pred_cap & compress_compress >= pred_extrap))
 #'
-#' testthat::expect_error(gf_extrap_compress(gf, env_grid_lower, -1), "gf_extrap_compress: power must lie between 0 and 1")
-#' testthat::expect_error(gf_extrap_compress(gf, env_grid_lower, 1.1), "gf_extrap_compress: power must lie between 0 and 1")
+#' testthat::expect_error(gf_extrap_compress(gf, env_grid_lower, -1), "pow not greater than or equal to 0")
+#' testthat::expect_error(gf_extrap_compress(gf, env_grid_lower, 1.1), "pow not less than or equal to 1")
 #'
 #' }
 #'
@@ -118,11 +110,10 @@ gf_extrap_compress <- function(gf,
                                gf_weight = c("uniform", "species", "rsq.total",
                                              "rsq.mean", "site", "site.species", "site.rsq.total", "site.rsq.mean")[3],
                                ...){
-  #Check power is in [0,1]
-  if (pow < 0 | pow > 1){
-    stop("gf_extrap_compress: power must lie between 0 and 1")
-  }
 
+  assertthat::assert_that(pow >= 0)
+  assertthat::assert_that(pow <= 1)
+  assertthat::assert_that(class(gf)[1] %in% c("gradientForest", "combinedGradientForest"))
 
   env_extrap <- predict(gf, env_grid, extrap = TRUE, ...)
 
@@ -134,16 +125,19 @@ gf_extrap_compress <- function(gf,
     ci <- cumimp(gf, varX, ...)
     x_range <- range(ci$x)
     y_range <- range(ci$y)
-    grad <- 2*diff(yold) / diff(xold)
-    #x_cap_upper <- xold[2]
-    #y_cap_upper <- yold[2]
-
+    grad <- diff(y_range) / diff(x_range)
+print(grad)
     upper_extremes <- tmp_x > x_range[2]
-    tmp_y[upper_extremes] <- rphildyerphd:::compress_extrap_z(tmp_x[upper_extremes] - x_range[2], pow, grad, y_range[2])
+    if(length(upper_extremes) > 0){
+      tmp_y[upper_extremes] <- rphildyerphd:::compress_extrap_z(tmp_x[upper_extremes] - x_range[2], pow, grad, y_range[2])
+    }
+
 
     lower_extremes <- tmp_x < x_range[1]
-    tmp_y[lower_extremes] <- rphildyerphd:::compress_extrap_z( x_range[1] - tmp_x[lower_extremes], pow, grad, -y_range[1])
-    tmp_y[lower_extremes] <- -tmp_y[lower_extremes]
+    if(length(lower_extremes) > 0){
+      tmp_y[lower_extremes] <- rphildyerphd:::compress_extrap_z( x_range[1] - tmp_x[lower_extremes], pow, grad, -y_range[1])
+      tmp_y[lower_extremes] <- -tmp_y[lower_extremes]
+    }
     return(tmp_y)
   })
 
@@ -253,99 +247,4 @@ compress_extrap_z <- function(x, p, a, b){
   return(z)
 
 }
-
-#' Maximum cumulative importance
-#'
-#' Internal Helper function
-#'
-#' Calculates the maximum cumulative importance for all variables
-#'
-#' @param gf
-#' @param importance_type Character, one of c("Weighted", "Raw", "Species"), see importance.gradientForest and importance.combinedGradientForest.
-#' @param gf_weight Character, how should gradient forest objects be weighted. See ?cumimp.combinedGradientForest
-#' @param sort logical, sort variables by importance
-#'
-#' @return numeric vector of maximum cumuliative importances, named by variable
-#'
-#' @examples
-#'
-#' if (requireNamespace("gradientForest", quietly = TRUE)) {
-#' library(gradientForest) #required to attach extendedForest
-#'
-#' set.seed(1000)
-#' species_dep <- matrix(runif(72, -10, 20), 9, 8)
-#'
-#' env_samp <- matrix(runif(900, 1, 2), 100, 9)
-#'
-#' species_response <- env_samp %*% species_dep
-#' species_abundance <- data.frame(matrix(rpois(length(as.vector(species_response)), as.vector(species_response)), 100, 8))
-#' names(species_abundance) <- LETTERS[1:8]
-#' env_samp <- as.data.frame(env_samp)
-#' names(env_samp) <- letters[1:9]
-#'
-#'
-#' gf1 <- gradientForest::gradientForest(
-#'     cbind(env_samp, species_abundance),
-#'     letters[1:9],
-#'     LETTERS[1:4]
-#' )
-#'
-#' gf2 <- gradientForest::gradientForest(
-#'     cbind(env_samp, species_abundance),
-#'     letters[1:9],
-#'     LETTERS[1:4+4]
-#' )
-#'
-#' gf1_2 <- combinedGradientForest(west = gf1, east = gf2)
-#'
-#' max_cum_imp <- get_max_cum_imp(gf1_2, importance_type = "Weighted", sort = TRUE)
-#' expectation_max <-  c(1,2,3,4,5,6,7,8,9)
-#' names(expectation_max) <- letters[1:9]
-#' testthat::expect_equal(max_cum_imp, expectation_max, tolerance = 1e-4)
-#' }
-get_max_cum_imp <- function(x) UseMethod("get_max_cum_imp")
-
-
-get_max_cum_imp.default <- function(x, ...){
-
-  warning(paste("'get_max_cum_imp' does not know how to handle object of class ",
-                class(x),
-                "and can only be used on classes gradientForest and combinedGradientForest"))
-
-}
-
-#'
-get_max_cum_imp.combinedGradientForest <- function(gf,
-                                           importance_type = c("Weighted", "Raw", "Species")[1],
-                                           gf_weight = c("uniform", "species", "rsq.total",
-                                                         "rsq.mean", "site", "site.species", "site.rsq.total", "site.rsq.mean")[3],
-                                           sort_vars = TRUE){
-  comb_imp <- importance.combinedGradientForest(gf, type = importance_type, weight = gf_weight, sort = sort_vars)
-  cumimp(gf1_2, "a")
-  max_cum_imp <- sapply(names(comb_imp), function(var_x){
-    tmp <- cumimp.combinedGradientForest(gf, var_x)
-    return( max(tmp$y))
-  })
-  max_cum_imp <- sort(max_cum_imp, decreasing = T )
-}
-
-
-comb_imp <- importance.combinedGradientForest(NWS.combinedGf, type = c("Weighted", "Raw", "Species")[1], sort = T)
-max_cum_imp <- comb_imp
-cum_imps <- list()
-for (varX in names(comb_imp)) {
-  cum_imps[[varX]] <- cumimp.combinedGradientForest(NWS.combinedGf, varX, weight = "site.rsq.total")
-  max_cum_imp[varX] <- max(cum_imps[[varX]]$y)
-}
-max_cum_imp <- sort(max_cum_imp, decreasing = T )
-imp.vars <- names(max_cum_imp)
-
-#' importance.gradientForest already gives the maximumum cumulative imp, sorted.
-get_max_cum_imp.gradientForest <- function(gf,
-                            importance_type = c("Accuracy", "Impurity", "Weighted", "Raw", "Species")[3],
-                            sort_vars = TRUE){
-  comb_imp <- importance.gradientForest(gf, type = importance_type, sort = sort_vars)
-  return(comb_imp)
-}
-
 

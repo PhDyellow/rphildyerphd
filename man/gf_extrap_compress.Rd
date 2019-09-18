@@ -4,14 +4,21 @@
 \alias{gf_extrap_compress}
 \title{Compress extremes non-linearly}
 \usage{
-gf_extrap_compress(gf, env_grid, power)
+gf_extrap_compress(gf, env_grid, pow, gf_importance_type = c("Weighted",
+  "Raw", "Species")[1], gf_weight = c("uniform", "species", "rsq.total",
+  "rsq.mean", "site", "site.species", "site.rsq.total",
+  "site.rsq.mean")[3], ...)
 }
 \arguments{
 \item{gf}{A gradientForest or combinedGradientForest object}
 
 \item{env_grid}{Data.frame of environmental predictors to predict}
 
-\item{power}{numeric in range [0, 1]. Extremes will be raised to this power, eg 1/4 takes the 4th root. 0 corresponds to capping, 1 corresponds to linear extrapolation.}
+\item{pow}{numeric in range [0, 1]. Extremes will be raised to this power, eg 1/4 takes the 4th root. 0 corresponds to capping, 1 corresponds to linear extrapolation.}
+
+\item{gf_weight}{Character, how should gradient forest objects be weighted. See ?cumimp.combinedGradientForest}
+
+\item{...}{paramaters passed to predict.gradientForest or predict.combinedGradientForest}
 }
 \value{
 Data.frame of transformed environmental predictors
@@ -40,17 +47,17 @@ library(gradientForest) #required to attach extendedForest
 #poisson dependency on env vars
 
 set.seed(1000)
+
 species_dep <- matrix(runif(72, -10, 20), 9, 8)
 
 env_samp <- matrix(runif(900, 1, 2), 100, 9)
 
-
 species_response <- env_samp \%*\% species_dep
 species_abundance <- data.frame(matrix(rpois(length(as.vector(species_response)), as.vector(species_response)), 100, 8))
 names(species_abundance) <- LETTERS[1:8]
+
 env_samp <- as.data.frame(env_samp)
 names(env_samp) <- letters[1:9]
-
 
 gf <- gradientForest::gradientForest(
     cbind(env_samp, species_abundance),
@@ -58,47 +65,52 @@ gf <- gradientForest::gradientForest(
     LETTERS[1:8]
 )
 
-env_grid_upper <- matrix(runif(9000, 1, 3), 1000, 9)
+env_grid_upper <- matrix(runif(9000, 1.1, 3), 1000, 9)
 env_grid_upper <- as.data.frame(env_grid_upper)
 names(env_grid_upper) <- letters[1:9]
-env_grid_lower <- matrix(runif(9000, 0, 2), 1000, 9)
+env_grid_lower <- matrix(runif(9000, 0, 1.8), 1000, 9)
 env_grid_lower <- as.data.frame(env_grid_lower)
 names(env_grid_lower) <- letters[1:9]
 
 #Testing upper extremes
+
+##Extrapolating
+pred_extrap <- predict(gf, env_grid_upper, extrap = TRUE)
+compress_extrap <- gf_extrap_compress(gf, env_grid_upper, pow = 1)
+testthat::expect_equal(as.data.frame(pred_extrap), as.data.frame(compress_extrap))
+
 ##Capping
 pred_cap <- predict(gf, env_grid_upper, extrap = FALSE)
 compress_cap <- gf_extrap_compress(gf, env_grid_upper, 0)
-testthat::expect_equal(as.data.frame(pred_cap), as.data.frame(compress_cap))
 
-##Extrapolating
-pred_extrap <- predict(gf, env_grid_upper, extrap = FALSE)
-compress_extrap <- gf_extrap_compress(gf, env_grid_upper, 1)
 testthat::expect_equal(as.data.frame(pred_cap), as.data.frame(compress_cap))
 
 ##Compression
 compress_compress <- gf_extrap_compress(gf, env_grid_upper, 0.25)
 #Here, extremes should lie between pred_cap and pred_extrap
-testthat::expect_true(all(compress_compress >= pred_cap & compress_compress <= pred_extrap))
+testthat::expect_true(all(compress_compress >= pred_cap[,names(compress_cap)] & compress_compress <= pred_extrap[,names(compress_cap)]))
+
+hist(compress_compress$a, breaks = seq(-0.05, 0.05, 0.005), ylim = c(0, 600))
+hist(pred_extrap$a, breaks = seq(-0.05, 0.05, 0.005), ylim = c(0,600))
 
 #' #Testing lower extremes
 ##Capping
 pred_cap <- predict(gf, env_grid_lower, extrap = FALSE)
 compress_cap <- gf_extrap_compress(gf, env_grid_lower, 0)
-testthat::expect_equal(as.data.frame(pred_cap), as.data.frame(compress_cap))
+testthat::expect_equal(as.data.frame(pred_cap[,names(compress_cap)]), as.data.frame(compress_cap), tolerance = 1e-4)
 
 ##Extrapolating
-pred_extrap <- predict(gf, env_grid_lower, extrap = FALSE)
+pred_extrap <- predict(gf, env_grid_lower, extrap = TRUE)
 compress_extrap <- gf_extrap_compress(gf, env_grid_lower, 1)
-testthat::expect_equal(as.data.frame(pred_cap), as.data.frame(compress_cap))
+testthat::expect_equal(as.data.frame(pred_extrap[,names(compress_cap)]), as.data.frame(compress_extrap))
 
 ##Compression
 compress_compress <- gf_extrap_compress(gf, env_grid_lower, 0.25)
 #Here, extremes should lie between pred_cap and pred_extrap
 testthat::expect_true(all(compress_compress <= pred_cap & compress_compress >= pred_extrap))
 
-testthat::expect_error(gf_extrap_compress(gf, env_grid_lower, -1), "gf_extrap_compress: power must lie between 0 and 1")
-testthat::expect_error(gf_extrap_compress(gf, env_grid_lower, 1.1), "gf_extrap_compress: power must lie between 0 and 1")
+testthat::expect_error(gf_extrap_compress(gf, env_grid_lower, -1), "pow not greater than or equal to 0")
+testthat::expect_error(gf_extrap_compress(gf, env_grid_lower, 1.1), "pow not less than or equal to 1")
 
 }
 
