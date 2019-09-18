@@ -126,7 +126,7 @@ gf_extrap_compress <- function(gf,
     x_range <- range(ci$x)
     y_range <- range(ci$y)
     grad <- diff(y_range) / diff(x_range)
-print(grad)
+
     upper_extremes <- tmp_x > x_range[2]
     if(length(upper_extremes) > 0){
       tmp_y[upper_extremes] <- rphildyerphd:::compress_extrap_z(tmp_x[upper_extremes] - x_range[2], pow, grad, y_range[2])
