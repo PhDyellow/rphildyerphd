@@ -330,3 +330,79 @@ gf_mvpart <- function(gf){
 
 }
 
+#' Calculate a range of k-medoid clusterings
+#'
+#' Uses the clara method to find clusterings for a dataset, but fits a range of k and will run in parallel if either a foreach registerDo*() backend is set or
+#' future::plan() is set.
+#'
+#'
+#' @param x dataset to cluster, passed to cluster::clara
+#' @param k integer vector, each element will create a fitting with k[i] clusters
+#' @param rep number of replicates for each element of k (redundant for clara?)
+#' @param parallel boolean. Allow parallel excecution. Requires a foreach registerDo*() backend to be set. doFuture::registerDoFuture() is recommended for flexibility.
+#' @param ... arguments passed to clara
+#'
+#' @return list of cluster::clara objects, NOT ordered with respect to k vector or rep.
+#'
+#'
+#' @export
+#' @importFrom foreach foreach %dopar%
+#' @examples
+#' set.seed(1000)
+#'
+#' samples <- cluster::xclara
+#'
+#' test_one  <- cluster_range(samples, k = c(2), rep = 1, parallel = FALSE)
+#' testthat::expect_equal(class(test_one), "list")
+#' testthat::expect_equal(class(test_one[[1]]), c("clara", "partition"))
+#' plot(test_one[[1]], which.plot = 1)
+#'
+#' testthat::expect_error(cluster_range(x, k = c(2), rep = 1, parallel = FALSE, not_a_param = TRUE), "unused argument (not_a_param = TRUE)", fixed = TRUE)
+#'
+#' test_many <- cluster_range(samples, k = 2:10, rep = 1, parallel = FALSE) #this is also a test, because it can fail
+#' testthat::expect_equal(class(test_many), "list")
+#' testthat::expect_true(all(sapply(test_many, function(x){class(x) == c("clara", "partition")})))
+#' testthat::expect_equal(length(test_many), length(2:10))
+#'
+#' test_many_reps <- cluster_range(samples, k = 2:10, rep = 5, parallel = FALSE)
+#'
+#' testthat::expect_equal(class(test_many_reps), "list")
+#' testthat::expect_true(all(sapply(test_many_reps, function(x){class(x) == c("clara", "partition")})))
+#' testthat::expect_equal(length(test_many_reps), length(2:10)*5)
+#'
+#' k_set <- sapply(test_many_reps, function(x){length(x$i.med)})
+#' testthat::expect_equal(sort(k_set), sort(rep(2:10, 5)))
+#'
+#' #Parallel aware
+#'
+#' if (requireNamespace("future", quietly = TRUE) & requireNamespace("doFuture", quietly = TRUE)) {
+#' library(future)
+#' library(doFuture)
+#' doFuture::registerDoFuture()
+#'
+#' future::plan(multisession, workers = 2)
+#'
+#' testthat::expect_gt(system.time( cluster_range(samples, k = 4, rep = 4, samples = 500, parallel = FALSE))[1],
+#'               system.time(cluster_range(samples, k = 4, rep = 4, samples = 500, parallel = TRUE))[1])
+#'}
+cluster_range <- function(x, k, rep = 1, parallel = TRUE, ...) {
+
+  # two choices if parallel is false:
+  #   1. if statement, %do% vs %dopar%
+  #   2. backup the foreach env, run registerDoSEQ(), reinstate the origenal foreach setup.
+  #
+  # going with 1, for simplicity. Could be improved with rlang call2 or base call, then eval
+
+  if(parallel) {
+    ret <- foreach(k = rep(k, rep), .inorder = FALSE) %dopar% {
+      cluster::clara(x = x, k = k, ...)
+    }
+    return(ret)
+  } else {
+    ret <- foreach(k = rep(k, rep), .inorder = FALSE) %do% {
+      cluster::clara(x = x, k = k, ...)
+    }
+    return(ret)
+
+  }
+}
