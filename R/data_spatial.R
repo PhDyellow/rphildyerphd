@@ -4,11 +4,13 @@
 #' and a target grid.
 #'
 #' Every lat lon point is assigned to the nearest grid point.
-#' Points that fall on the same grid cell are aggregated by fun.
+#' Points that fall on the same grid cell are aggregated by fun, except when agg_x or agg_y are TRUE.
 #'
 #' The target grid will align with the origin unless an offset is specified.
 #'
 #' The two data.frames are then merged, so that only rows appearing in both datasets are returned.
+#'
+#'
 #'
 #' This function is suitable for sparse datasets that are not necessarily on grid, and are in data.frames.
 #' The raster package should be used if both datasets are on a regular grid.
@@ -21,6 +23,8 @@
 #' @param offset numeric. target grid offset
 #' @param fun function, applied to data that falls in the same grid cell
 #' @param ... additional arguments to fun
+#' @param agg_x if FALSE, do not aggregate x
+#' @param agg_y if FALSE, do not aggregate y
 #'
 #' @return A data.frame. Each row has a unique lat and lon, duplicates are aggregated by fun. All other columns from x and y are included.
 #'
@@ -84,12 +88,27 @@
 #' testthat::expect_equal(align_merge_sp(y,y2,spatial_cols =  c("lat", "lon"), res = target_res, offset = target_offset, fun = mean),
 #'    data.frame(lat = c(0.1, .2), lon = c(0.1, .2), val_y = c(6.5, 8.5), val_y2 =  c(16.5, 18.5)))
 #'
+#' #Merge without aggregate
+#'
+#' x2 <- data.frame(lat = c(0.1, .14), lon = c(0.1, .14), val_x = 1:2)
+#'
+#' testthat::expect_equal(align_merge_sp(x2,x2,spatial_cols =  c("lat", "lon"), res = target_res, offset = target_offset, fun = mean),
+#'    data.frame(lat = c(0.1), lon = c(0.1), val_x.x = c(1.5), val_x.y =  c(1.5)))
+#' testthat::expect_equal(align_merge_sp(x2,x2,spatial_cols =  c("lat", "lon"), res = target_res, offset = target_offset, fun = mean, agg_x = FALSE),
+#'    data.frame(lat = c(0.1, 0.1), lon = c(0.1, 0.1), val_x.x = c(1,2), val_x.y =  c(1.5,1.5)))
+#' testthat::expect_equal(align_merge_sp(x2,x2,spatial_cols =  c("lat", "lon"), res = target_res, offset = target_offset, fun = mean, agg_y = FALSE),
+#'    data.frame(lat = c(0.1, 0.1), lon = c(0.1, 0.1), val_x.x = c(1.5, 1.5), val_x.y =  c(1,2)))
+#' testthat::expect_equal(align_merge_sp(x2,x2,spatial_cols =  c("lat", "lon"), res = target_res, offset = target_offset, fun = mean, agg_x = FALSE, agg_y = FALSE),
+#'    data.frame(lat = rep(0.1, 4), lon = rep(0.1, 4), val_x.x = rep(c(1, 2), each = 2), val_x.y =  rep(c(1,2), 2)))
+#'
 align_merge_sp <- function(x, y,
                            spatial_cols = c("lat", "lon"),
                            res = 1,
                            offset = 0,
                            fun = mean,
-                           ...){
+                           ...,
+                           agg_x = TRUE,
+                           agg_y = TRUE){
 
 
   x <- as.data.frame(x)
@@ -106,11 +125,19 @@ align_merge_sp <- function(x, y,
 
 
   x[,spatial_cols] <- round(x[,spatial_cols]/res + offset)
-  x_agg <- aggregate(x, by = list(x[,spatial_cols[1]], x[,spatial_cols[2]]), fun, ..., simplify = TRUE)
-  x_agg <- x_agg[,names(x)]
+  if(agg_x){
+    x_agg <- aggregate(x, by = list(x[,spatial_cols[1]], x[,spatial_cols[2]]), fun, ..., simplify = TRUE)
+    x_agg <- x_agg[,names(x)]
+  } else {
+    x_agg <- x
+  }
   y[,spatial_cols] <- round(y[,spatial_cols]/res + offset)
-  y_agg <- aggregate(y, by = list(y[,spatial_cols[1]], y[,spatial_cols[2]]), fun, ..., simplify = TRUE)
-  y_agg <- y_agg[,names(y)]
+  if(agg_y){
+    y_agg <- aggregate(y, by = list(y[,spatial_cols[1]], y[,spatial_cols[2]]), fun, ..., simplify = TRUE)
+    y_agg <- y_agg[,names(y)]
+  } else {
+    y_agg <- y
+  }
   xy <- merge(x_agg, y_agg, by = spatial_cols)
   xy[, spatial_cols] <- (xy[, spatial_cols] - offset)*res
   return(xy)
