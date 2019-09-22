@@ -346,7 +346,7 @@ gf_mvpart <- function(gf){
 #'
 #'
 #' @export
-#' @importFrom foreach foreach %dopar%
+#' @importFrom foreach foreach %dopar% %do%
 #' @examples
 #' set.seed(1000)
 #'
