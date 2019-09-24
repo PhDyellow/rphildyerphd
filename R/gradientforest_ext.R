@@ -330,6 +330,93 @@ gf_mvpart <- function(gf){
 
 }
 
+
+#' Gradient Forest Clustering F-ratio
+#'
+#' Calculate the F-ratio for predicting the species response using only the clustering.
+#'
+#' @param gf A gradient forest model
+#' @param k number of clusters in fitting
+#' @param clust integer vector assigning sample sites to clusters, must align with gf_spp
+#'
+#' @return list containing var_model, var_resid, f_ratio, p_value, cluster, inertia_exp
+#'
+#' @importFrom vegan capscale
+#'
+#' @examples
+#'
+#' if (requireNamespace("gradientForest", quietly = TRUE)) {
+#' library(gradientForest) #required to attach extendedForest
+#'
+#' cluster_tests <- 3:5
+#'
+#' data(CoMLsimulation)
+#' preds <- colnames(Xsimulation)
+#' specs <- colnames(Ysimulation)
+#' f1 <- gradientForest(data.frame(Ysimulation,Xsimulation), preds, specs[1:6], ntree=10)
+#' f2 <- gradientForest(data.frame(Ysimulation,Xsimulation), preds, specs[1:6+6], ntree=10)
+#' f12 <- combinedGradientForest(west=f1,east=f2)
+#' f1.pred<-predict(f1) # defaults to predicting the samples
+#'
+#' clust_list <- rphildyerphd:::cluster_range(f1.pred, k = cluster_tests) #no parameters passed to cluster::clara, not important
+#'
+#'
+#' expected_f <- c(23.328, 18.5, 19.1)
+#'
+#' for(i in 1:length(cluster_tests)){
+#'   results <- rphildyerphd:::gf_anova(gf = f1, k = cluster_tests[i], clust = clust_list[[i]]$clustering)
+#'   testthat::expect_named(results, c("var_model", "var_resid", "f_ratio", "p_value", "cluster", "inertia_exp"))
+#'   testthat::expect_equal(results$cluster, cluster_tests[i])
+#'   testthat::expect_equal(results$f_ratio, expected_f[i], tolerance = 1e-3)
+#' }
+#'
+#' results <- rphildyerphd:::gf_anova(gf = f1, k = cluster_tests[3], clust = clust_list[[3]]$clustering)
+#' print(results)
+#' testthat::expect_equal(results, list(var_model = 16.1579,
+#'    var_resid = 20.10891,
+#'    f_ratio = 19.08359,
+#'    p_value = 0.001,
+#'    cluster = 5,
+#'    inertia_exp = 0.5776277
+#'    ),
+#'   tolerance = 1e-3)
+#'
+#' }
+gf_anova <- function(gf,
+                     k,
+                     clust) {
+  gf_spp <- gf$Y[names(gf$result)] #species with R^2 > 0
+  xy <- cbind(gf_spp, cluster = clust)
+  xy <- xy[rowSums(gf_spp) > 0, ]
+  lhs <- "xy[names(gf_spp)]"
+  rhs <- "factor(cluster)"
+  form <- as.formula(paste(lhs, "~", rhs))
+
+  fit_rda <- vegan::capscale(form, xy, dist="bray")
+  varexp <- if (is.null(fit_rda$CCA)) {
+    NA
+  } else {
+    fit_rda$CCA$tot.chi / fit_rda$tot.chi
+  }
+
+  rda_anova <- anova(fit_rda)
+
+
+
+  ret <- list(var_model = ifelse(!is.null(rda_anova$SumOfSqs[1]),
+                            rda_anova$SumOfSqs[1], NA),
+              var_resid = ifelse(!is.null(rda_anova$SumOfSqs[2]),
+                            rda_anova$SumOfSqs[2], NA),
+              f_ratio = rda_anova$F[1],
+              p_value = rda_anova[["Pr(>F)"]][1],
+              cluster = k,
+              inertia_exp = varexp)
+
+  return(ret)
+
+}
+
+
 #' Calculate a range of k-medoid clusterings
 #'
 #' Uses the clara method to find clusterings for a dataset, but fits a range of k and will run in parallel if either a foreach registerDo*() backend is set or
