@@ -2,7 +2,7 @@
 % Please edit documentation in R/gradientforest_ext.R
 \name{cluster_range}
 \alias{cluster_range}
-\title{Calculate F-ratio for GF clustering}
+\title{Calculate a range of k-medoid clusterings}
 \usage{
 cluster_range(x, k, rep = 1, parallel = TRUE, ...)
 }
@@ -21,11 +21,8 @@ cluster_range(x, k, rep = 1, parallel = TRUE, ...)
 list of cluster::clara objects, NOT ordered with respect to k vector or rep.
 }
 \description{
-Given a gradient forest model, a clustered environmental grid,
-and a
-}
-\details{
-Calculate the f-ratio for a clustering.
+Uses the clara method to find clusterings for a dataset, but fits a range of k and will run in parallel if either a foreach registerDo*() backend is set or
+future::plan() is set.
 }
 \examples{
 set.seed(1000)

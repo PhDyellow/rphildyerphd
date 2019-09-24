@@ -95,6 +95,4 @@ z <- rphildyerphd:::compress_extrap_z(x, p, a, b)
 pl_all <- data.frame(x = x, y = a*x+b, z = z, cap = b)
 matplot(pl_all$x, pl_all[,c("y","z", "cap")])
 
-
-
 }
