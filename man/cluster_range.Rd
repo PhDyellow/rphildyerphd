@@ -4,18 +4,18 @@
 \alias{cluster_range}
 \title{Calculate a range of k-medoid clusterings}
 \usage{
-cluster_range(x, k, rep = 1, parallel = TRUE, ...)
+cluster_range(x, k, reps = 1, is_parallel = TRUE, ...)
 }
 \arguments{
 \item{x}{dataset to cluster, passed to cluster::clara}
 
 \item{k}{integer vector, each element will create a fitting with k[i] clusters}
 
-\item{rep}{number of replicates for each element of k (redundant for clara?)}
-
-\item{parallel}{boolean. Allow parallel excecution. Requires a foreach registerDo*() backend to be set. doFuture::registerDoFuture() is recommended for flexibility.}
+\item{reps}{number of replicates for each element of k (redundant for clara?)}
 
 \item{...}{arguments passed to clara}
+
+\item{parallel}{boolean. Allow parallel excecution. Requires a foreach registerDo*() backend to be set. doFuture::registerDoFuture() is recommended for flexibility.}
 }
 \value{
 list of cluster::clara objects, NOT ordered with respect to k vector or rep.
@@ -29,19 +29,19 @@ set.seed(1000)
 
 samples <- cluster::xclara
 
-test_one  <- cluster_range(samples, k = c(2), rep = 1, parallel = FALSE)
+test_one  <- cluster_range(samples, k = c(2), reps = 1, is_parallel = FALSE)
 testthat::expect_equal(class(test_one), "list")
 testthat::expect_equal(class(test_one[[1]]), c("clara", "partition"))
 plot(test_one[[1]], which.plot = 1)
 
-testthat::expect_error(cluster_range(x, k = c(2), rep = 1, parallel = FALSE, not_a_param = TRUE), "unused argument (not_a_param = TRUE)", fixed = TRUE)
+testthat::expect_error(cluster_range(x, k = c(2), reps = 1, is_parallel = FALSE, not_a_param = TRUE), "unused argument (not_a_param = TRUE)", fixed = TRUE)
 
-test_many <- cluster_range(samples, k = 2:10, rep = 1, parallel = FALSE) #this is also a test, because it can fail
+test_many <- cluster_range(samples, k = 2:10, reps = 1, is_parallel = FALSE) #this is also a test, because it can fail
 testthat::expect_equal(class(test_many), "list")
 testthat::expect_true(all(sapply(test_many, function(x){class(x) == c("clara", "partition")})))
 testthat::expect_equal(length(test_many), length(2:10))
 
-test_many_reps <- cluster_range(samples, k = 2:10, rep = 5, parallel = FALSE)
+test_many_reps <- cluster_range(samples, k = 2:10, reps = 5, is_parallel = FALSE)
 
 testthat::expect_equal(class(test_many_reps), "list")
 testthat::expect_true(all(sapply(test_many_reps, function(x){class(x) == c("clara", "partition")})))
@@ -59,7 +59,7 @@ doFuture::registerDoFuture()
 
 future::plan(multisession, workers = 2)
 
-testthat::expect_gt(system.time( cluster_range(samples, k = 4, rep = 4, samples = 500, parallel = FALSE))[1],
-              system.time(cluster_range(samples, k = 4, rep = 4, samples = 500, parallel = TRUE))[1])
+testthat::expect_gt(system.time( cluster_range(samples, k = 4, reps = 4, samples = 500, is_parallel = FALSE))[1],
+              system.time(cluster_range(samples, k = 4, reps = 4, samples = 500, is_parallel = TRUE))[1])
 }
 }

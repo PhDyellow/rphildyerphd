@@ -4,10 +4,7 @@
 \alias{gf_extrap_compress}
 \title{Compress extremes non-linearly}
 \usage{
-gf_extrap_compress(gf, env_grid, pow, gf_importance_type = c("Weighted",
-  "Raw", "Species")[1], gf_weight = c("uniform", "species", "rsq.total",
-  "rsq.mean", "site", "site.species", "site.rsq.total",
-  "site.rsq.mean")[3], ...)
+gf_extrap_compress(gf, env_grid, pow, ...)
 }
 \arguments{
 \item{gf}{A gradientForest or combinedGradientForest object}
@@ -15,8 +12,6 @@ gf_extrap_compress(gf, env_grid, pow, gf_importance_type = c("Weighted",
 \item{env_grid}{Data.frame of environmental predictors to predict}
 
 \item{pow}{numeric in range [0, 1]. Extremes will be raised to this power, eg 1/4 takes the 4th root. 0 corresponds to capping, 1 corresponds to linear extrapolation.}
-
-\item{gf_weight}{Character, how should gradient forest objects be weighted. See ?cumimp.combinedGradientForest}
 
 \item{...}{paramaters passed to predict.gradientForest or predict.combinedGradientForest}
 }

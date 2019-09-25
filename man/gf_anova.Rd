@@ -2,8 +2,7 @@
 % Please edit documentation in R/gradientforest_ext.R
 \name{gf_anova}
 \alias{gf_anova}
-\title{F-ratio over many clusterings
-Gradient Forest Clustering F-ratio}
+\title{Gradient Forest Clustering F-ratio}
 \usage{
 gf_anova(gf, k, clust)
 }
@@ -21,6 +20,8 @@ list containing var_model, var_resid, f_ratio, p_value, cluster, inertia_exp
 Calculate the F-ratio for predicting the species response using only the clustering.
 }
 \examples{
+
+set.seed(1000)
 
 if (requireNamespace("gradientForest", quietly = TRUE)) {
 library(gradientForest) #required to attach extendedForest
@@ -48,7 +49,6 @@ for(i in 1:length(cluster_tests)){
 }
 
 results <- rphildyerphd:::gf_anova(gf = f1, k = cluster_tests[3], clust = clust_list[[3]]$clustering)
-print(results)
 testthat::expect_equal(results, list(var_model = 16.1579,
    var_resid = 20.10891,
    f_ratio = 19.08359,
