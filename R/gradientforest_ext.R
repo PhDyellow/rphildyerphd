@@ -465,6 +465,8 @@ gf_clust_f_ratio <- function(gf,
 #'
 #' @examples
 #'
+#' set.seed(1000)
+#'
 #' if (requireNamespace("gradientForest", quietly = TRUE)) {
 #' library(gradientForest) #required to attach extendedForest
 #'
@@ -491,7 +493,6 @@ gf_clust_f_ratio <- function(gf,
 #' }
 #'
 #' results <- rphildyerphd:::gf_anova(gf = f1, k = cluster_tests[3], clust = clust_list[[3]]$clustering)
-#' print(results)
 #' testthat::expect_equal(results, list(var_model = 16.1579,
 #'    var_resid = 20.10891,
 #'    f_ratio = 19.08359,
