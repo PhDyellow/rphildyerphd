@@ -9,7 +9,8 @@ Authors@R:
 Description: A collection of functions that are useful in my PhD. I will break out feature sets that are generally useful to others When I see a need.
 Imports:
   assertthat,
-  vegan
+  vegan,
+  clue
 Suggests:
   mvpart 
 License: GPL-3

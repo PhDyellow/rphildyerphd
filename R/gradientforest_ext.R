@@ -621,3 +621,96 @@ cluster_range <- function(x, k, reps = 1, is_parallel = TRUE, ...) {
 
   }
 }
+
+
+#' Find optimal mvpart to cluster mapping
+#'
+#' Given mvpart classifications and another clustering classification,
+#' return a mapping that maximises the diagonal of the confusion matrix.
+#'
+#' The mvpart leaf node to cluster id mapping is 1 to 1. Any excess nodes or id's will be assigned NA.
+#'
+#' @param mvpart_map
+#' @param clust_map
+#'
+#' @return list of: best confusion matrix, sum of diagonal of best confusion matrix, data.frame mapping mvpart_map entries to clust_map entries
+#'
+#' @examples
+#'
+#' if (requireNamespace("gradientForest", quietly = TRUE)) {
+#' library(gradientForest) #required to attach extendedForest
+#'
+#'
+#' data(CoMLsimulation)
+#' preds <- colnames(Xsimulation)
+#' specs <- colnames(Ysimulation)
+#' f1 <- gradientForest(data.frame(Ysimulation,Xsimulation), preds, specs[1:6], ntree=10)
+#' f2 <- gradientForest(data.frame(Ysimulation,Xsimulation), preds, specs[1:6+6], ntree=10)
+#' f12 <- combinedGradientForest(west=f1,east=f2)
+#'
+#' env_grid <- f1$X
+#' env_grid$site_id <- 1:nrow(env_grid)
+#' gf_grid_sites <- data.frame(site_id = 1:nrow(f1$Y))
+#' k_range <- 2:10
+#' reps <- 1
+#' is_parallel <- FALSE
+#' pow <- 0.25
+#' set.seed(1000)
+#'
+#' #Adjust clara fittings
+#'
+#' test3 <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow,
+#' clara_args = list(samples = 20, sampsize = 50, trace = 0, rngR = TRUE, pamLike = TRUE, correct.d = TRUE))
+#'
+#'
+#' spatial_vars <- names(gf_grid_sites)
+#' #Predict + compress#'
+#'
+#' env_trans <- do.call("gf_extrap_compress", c(list(gf = f1, env_grid = env_grid[!names(env_grid) %in% spatial_vars], pow = pow)))
+#'
+#' #reattach spatial data
+#' env_trans <- cbind(env_grid[names(env_grid) %in% spatial_vars], env_trans)
+#'
+#' clara_clust <- merge(data.frame(env_trans[, spatial_vars, drop = FALSE], clust = test3$clust_list[[3]]$clustering), gf_grid_sites, by = "site_id")
+#' node_clara <- merge(data.frame(site_id = gf_grid_sites, leaf = test3$mvpart), clara_clust, by = "site_id")
+#' opt_test <- rphildyerphd:::opt_confusion(as.numeric(node_clara$leaf), node_clara$clust)
+#' #Extract f-ratios per k into long form
+#' opt_test2 <- lapply(test3$clust_list, mvpart = test3$mvpart, function(clust, mvpart){
+#'   clara_clust <- merge(data.frame(env_trans[, spatial_vars, drop = FALSE], clust = clust$clustering), gf_grid_sites, by = "site_id")
+#'   node_clara <- merge(data.frame(site_id = gf_grid_sites, leaf = mvpart), clara_clust, by = "site_id")
+#'   return(rphildyerphd:::opt_confusion(as.numeric(node_clara$leaf), node_clara$clust))
+#' })
+#'
+#' scores <- sapply(opt_test2, function(x){x$score})
+#' testthat::expect_equal(scores, c(29, 40, 48, 58, 69, 75, 86, 85, 66))
+#'
+#' }
+#'
+opt_confusion <- function(x, y){
+
+  assertthat::assert_that(is.vector(x))
+  assertthat::assert_that(is.vector(y))
+  x <- factor(x)
+  y <- factor(y)
+  #confusion matrix
+  ifelse(nlevels(x) <= nlevels(y), transpose <- FALSE, transpose <- TRUE)
+  conf <- table(x, y)
+  if(transpose) conf <- t(conf)
+  mapping <- clue::solve_LSAP(conf, maximum = TRUE)
+  conf_max <- conf[,mapping]
+  if(transpose) conf_max <- t(conf_max)
+  sum(diag(conf_max))
+
+
+  if(transpose) {
+    map_id <- data.frame(x_id = c(row.names(conf_max), levels(x)[!levels(x) %in% row.names(conf_max)]), y_id = c(colnames(conf_max), rep(NA, nlevels(x) - nlevels(y))))
+  } else {
+    map_id <- data.frame(x_id = c(row.names(conf_max), rep(NA, nlevels(y) - nlevels(x))), y_id = c(colnames(conf_max), levels(y)[!levels(y) %in% colnames(conf_max)]))
+  }
+
+  return(list(conf_max = conf_max, score = sum(diag(conf_max)), mapping = map_id))
+
+}
+
+
+
