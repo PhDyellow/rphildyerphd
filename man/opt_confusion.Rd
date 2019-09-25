@@ -59,6 +59,7 @@ clara_clust <- merge(data.frame(env_trans[, spatial_vars, drop = FALSE], clust =
 node_clara <- merge(data.frame(site_id = gf_grid_sites, leaf = test3$mvpart), clara_clust, by = "site_id")
 opt_test <- rphildyerphd:::opt_confusion(as.numeric(node_clara$leaf), node_clara$clust)
 #Extract f-ratios per k into long form
+set.seed(1000)
 opt_test2 <- lapply(test3$clust_list, mvpart = test3$mvpart, function(clust, mvpart){
   clara_clust <- merge(data.frame(env_trans[, spatial_vars, drop = FALSE], clust = clust$clustering), gf_grid_sites, by = "site_id")
   node_clara <- merge(data.frame(site_id = gf_grid_sites, leaf = mvpart), clara_clust, by = "site_id")
@@ -66,7 +67,7 @@ opt_test2 <- lapply(test3$clust_list, mvpart = test3$mvpart, function(clust, mvp
 })
 
 scores <- sapply(opt_test2, function(x){x$score})
-testthat::expect_equal(scores, c(29, 40, 48, 58, 69, 75, 86, 85, 66))
+testthat::expect_equal(scores, c(29, 40, 48, 58, 71, 80, 91, 91, 89))
 
 }
 

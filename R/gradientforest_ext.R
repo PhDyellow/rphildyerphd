@@ -118,7 +118,7 @@ gf_extrap_compress <- function(gf,
     tmp_x <- env_grid[, varX]
     #to compress extremes, I need x cap, y cap, extrapolation gradient
     #Adapted from gradientForest::predict.gradientForest()
-    ci <- cumimp(gf, varX, ...)
+    ci <- gradientForest::cumimp(gf, varX, ...)
     x_range <- range(ci$x)
     y_range <- range(ci$y)
     grad <- diff(y_range) / diff(x_range)
@@ -392,7 +392,7 @@ gf_mvpart <- function(gf){
 #' #testthat::expect_true(test$clust_list[[1]]$anova$f_ratio != test2$clust_list[[1]]$anova$f_ratio)
 #'
 #' #Adjust clara fittings
-#'
+#' set.seed(1000)
 #' test3 <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, k_range = k_range, reps =  reps+2, is_parallel = is_parallel, pow = pow,
 #' clara_args = list(samples = 20, sampsize = 50, trace = 0, rngR = TRUE, pamLike = TRUE, correct.d = TRUE))
 #'
@@ -694,6 +694,7 @@ cluster_range <- function(x, k, reps = 1, is_parallel = TRUE, ...) {
 #' node_clara <- merge(data.frame(site_id = gf_grid_sites, leaf = test3$mvpart), clara_clust, by = "site_id")
 #' opt_test <- rphildyerphd:::opt_confusion(as.numeric(node_clara$leaf), node_clara$clust)
 #' #Extract f-ratios per k into long form
+#' set.seed(1000)
 #' opt_test2 <- lapply(test3$clust_list, mvpart = test3$mvpart, function(clust, mvpart){
 #'   clara_clust <- merge(data.frame(env_trans[, spatial_vars, drop = FALSE], clust = clust$clustering), gf_grid_sites, by = "site_id")
 #'   node_clara <- merge(data.frame(site_id = gf_grid_sites, leaf = mvpart), clara_clust, by = "site_id")
@@ -701,7 +702,7 @@ cluster_range <- function(x, k, reps = 1, is_parallel = TRUE, ...) {
 #' })
 #'
 #' scores <- sapply(opt_test2, function(x){x$score})
-#' testthat::expect_equal(scores, c(29, 40, 48, 58, 69, 75, 86, 85, 66))
+#' testthat::expect_equal(scores, c(29, 40, 48, 58, 71, 80, 91, 91, 89))
 #'
 #' }
 #'
