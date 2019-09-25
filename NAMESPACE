@@ -2,6 +2,7 @@
 
 export(align_merge_sp)
 export(cluster_range)
+export(gf_clust_f_ratio)
 export(gf_extrap_compress)
 export(gf_mvpart)
 importFrom(foreach,"%do%")
