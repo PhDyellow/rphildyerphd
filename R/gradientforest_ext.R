@@ -16,7 +16,6 @@
 #' @param gf A gradientForest or combinedGradientForest object
 #' @param env_grid Data.frame of environmental predictors to predict
 #' @param pow numeric in range [0, 1]. Extremes will be raised to this power, eg 1/4 takes the 4th root. 0 corresponds to capping, 1 corresponds to linear extrapolation.
-#' @param gf_weight Character, how should gradient forest objects be weighted. See ?cumimp.combinedGradientForest
 #' @param ... paramaters passed to predict.gradientForest or predict.combinedGradientForest
 #'
 #' @return Data.frame of transformed environmental predictors
@@ -106,9 +105,6 @@
 gf_extrap_compress <- function(gf,
                                env_grid,
                                pow,
-                               gf_importance_type = c("Weighted", "Raw", "Species")[1],
-                               gf_weight = c("uniform", "species", "rsq.total",
-                                             "rsq.mean", "site", "site.species", "site.rsq.total", "site.rsq.mean")[3],
                                ...){
 
   assertthat::assert_that(pow >= 0)
