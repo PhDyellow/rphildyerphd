@@ -106,7 +106,7 @@ gf_extrap_compress <- function(gf,
                                env_grid,
                                pow,
                                ...){
-
+  env_grid <- as.data.frame(env_grid)
   assertthat::assert_that(pow >= 0)
   assertthat::assert_that(pow <= 1)
   assertthat::assert_that(class(gf)[1] %in% c("gradientForest", "combinedGradientForest"))
@@ -217,6 +217,7 @@ gf_extrap_compress <- function(gf,
 #'
 #' testthat::expect_true(all(rphildyerphd:::compress_extrap_z(x, p, a, b) <= a*x+b))
 #' testthat::expect_true(all(rphildyerphd:::compress_extrap_z(x, p, a, b) >= b))
+#' testthat::expect_true(all(rphildyerphd:::compress_extrap_z(x, p = 0, a, b) == b))
 #'
 #' testthat::expect_error(rphildyerphd:::compress_extrap_z(x, p = 2, a, b), "p not less than or equal to 1")
 #' testthat::expect_error(rphildyerphd:::compress_extrap_z(x, p, a = -1, b), "a not greater than 0")
@@ -231,11 +232,13 @@ gf_extrap_compress <- function(gf,
 compress_extrap_z <- function(x, p, a, b){
 
   assertthat::assert_that(p >=0, p<=1)
-  assertthat::assert_that(a >0)
+  assertthat::assert_that(a >=0)
   assertthat::assert_that(all(x >= 0))
 
   if(p == 1){
     z <- a * x + b
+  } else if (a == 0 | p == 0){
+    z <- b
   } else {
     z <- (x + (a / p) ^ (1/(p-1)) ) ^ p + b - (a / p) ^ (p / (p-1))
   }
@@ -314,9 +317,9 @@ gf_mvpart <- function(gf){
                 xval=10,
                 xvmult=10,
                 xvse=1,
-                plot.add=TRUE,
-                text.add=TRUE,
-                pretty=TRUE)
+                plot.add=FALSE,
+                text.add=FALSE,
+                pretty=FALSE)
 
   #only terminal nodes appear in mvp$where, but other nodes occupy id slots leading to "missing" id numbers
   #relevel to avoid confusion over "missing" nodes by end users
@@ -445,8 +448,9 @@ gf_clust_f_ratio <- function(gf,
   cluster_list <- do.call("cluster_range", c(list(x = env_trans[, !names(env_trans) %in% spatial_vars], k = k_range, reps = reps, is_parallel = is_parallel), clara_args))
 
   #MVPART
+  pdf(file = NULL)
   mvpart_result <- gf_mvpart(gf)
-
+  dev.off()
   #fratio
 
   cluster_fratio <- lapply(cluster_list, spatial_vars = spatial_vars, function(clust, spatial_vars){
@@ -456,7 +460,7 @@ gf_clust_f_ratio <- function(gf,
 
     #cluster of samples
     sample_clust <- merge(data.frame(env_trans[, spatial_vars, drop = FALSE], clust = clust$clustering), gf_grid_sites, by = spatial_vars)
-    node_clust <- merge(data.frame(site_id = gf_grid_sites, leaf = mvpart_result), sample_clust, by = spatial_vars)
+    node_clust <- merge(data.frame(gf_grid_sites, leaf = mvpart_result), sample_clust, by = spatial_vars)
     ret$conf <- rphildyerphd:::opt_confusion(node_clust$leaf, node_clust$clust)
     ret$anova <- gf_anova(gf  , k = length(clust$i.med), sample_clust$clust)
 
