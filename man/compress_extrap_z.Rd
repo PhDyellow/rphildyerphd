@@ -84,10 +84,11 @@ x <- seq(0, 5, 0.1)
 
 testthat::expect_true(all(rphildyerphd:::compress_extrap_z(x, p, a, b) <= a*x+b))
 testthat::expect_true(all(rphildyerphd:::compress_extrap_z(x, p, a, b) >= b))
+testthat::expect_true(all(rphildyerphd:::compress_extrap_z(x, p = 0, a, b) == b))
 
 testthat::expect_error(rphildyerphd:::compress_extrap_z(x, p = 2, a, b), "p not less than or equal to 1")
-testthat::expect_error(rphildyerphd:::compress_extrap_z(x, p, a = -1, b), "a not greater than 0")
-testthat::expect_error(rphildyerphd:::compress_extrap_z(x, p, a = 0, b), "a not greater than 0")
+testthat::expect_error(rphildyerphd:::compress_extrap_z(x, p, a = -1, b), "a not greater than or equal to 0")
+#testthat::expect_true(all(rphildyerphd:::compress_extrap_z(x, p, a = 0, b) == b))
 testthat::expect_error(rphildyerphd:::compress_extrap_z(x, p = -1, a, b), "p not greater than or equal to 0")
 testthat::expect_error(rphildyerphd:::compress_extrap_z(x = seq(-1, 1, 0.1), p, a, b), "Elements 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 of x >= 0 are not true")
 
