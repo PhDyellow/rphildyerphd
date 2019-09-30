@@ -42,7 +42,7 @@ set.seed(1000)
 
 #Adjust clara fittings
 
-test3 <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow,
+test3 <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, spatial_vars = c(""), k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow,
 clara_args = list(samples = 20, sampsize = 50, trace = 0, rngR = TRUE, pamLike = TRUE, correct.d = TRUE))
 
 

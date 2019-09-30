@@ -4,9 +4,9 @@
 \alias{gf_clust_f_ratio}
 \title{F-ratio over many clusterings}
 \usage{
-gf_clust_f_ratio(gf, gf_grid_sites, env_grid, k_range, reps = 1,
-  is_parallel = TRUE, pow = 0.25, gf_predict_args = list(),
-  clara_args = list())
+gf_clust_f_ratio(gf, gf_grid_sites, env_grid, spatial_vars, k_range,
+  reps = 1, is_parallel = TRUE, pow = 0.25,
+  gf_predict_args = list(), clara_args = list())
 }
 \arguments{
 \item{gf}{a gf model. Currently only single GF model, not combinedGradientForest}
@@ -14,6 +14,8 @@ gf_clust_f_ratio(gf, gf_grid_sites, env_grid, k_range, reps = 1,
 \item{gf_grid_sites}{integer vector, length is nrow(gf$Y). Maps between sample sites from the GF object to grid cells by row number}
 
 \item{env_grid}{environmental data in original units.}
+
+\item{spatial_vars}{character vector specifying column names for spatial location of grid cells}
 
 \item{k_range}{integer vector, cluster values to fit}
 
@@ -64,10 +66,10 @@ reps <- 1
 is_parallel <- FALSE
 pow <- 0.25
 set.seed(1000)
-test <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow)
+test <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, spatial_vars = c(""), k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow)
 testthat::expect_named(test, c("mvpart", "clust_list"))
 
-testthat::expect_error(test <- gf_clust_f_ratio(gf = f1, gf_grid_sites = 1:10, env_grid = env_grid, k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow),
+testthat::expect_error(test <- gf_clust_f_ratio(gf = f1, gf_grid_sites = 1:10, env_grid = env_grid, spatial_vars = c(""), k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow),
 "length(gf_grid_sites) not equal to nrow(gf$Y)", fixed = TRUE)
 
 
@@ -78,12 +80,12 @@ testthat::expect_equal(length(test$clust_list), length(k_range)*reps)
 testthat::expect_true(all(sapply(test$clust_list, function(x){class(x) == c("clara", "partition")} )))
 testthat::expect_equal(class(test$mvpart), c("factor") )
 set.seed(1000)
-test2 <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow*0.5)
+test2 <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, spatial_vars = c(""), k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow*0.5)
 #testthat::expect_true(test$clust_list[[1]]$anova$f_ratio != test2$clust_list[[1]]$anova$f_ratio)
 
 #Adjust clara fittings
 set.seed(1000)
-test3 <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, k_range = k_range, reps =  reps+2, is_parallel = is_parallel, pow = pow,
+test3 <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, spatial_vars = c(""), k_range = k_range, reps =  reps+2, is_parallel = is_parallel, pow = pow,
 clara_args = list(samples = 20, sampsize = 50, trace = 0, rngR = TRUE, pamLike = TRUE, correct.d = TRUE))
 
 #Extract f-ratios per k into long form

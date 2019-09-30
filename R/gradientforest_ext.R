@@ -343,7 +343,7 @@ gf_mvpart <- function(gf){
 #' @param gf a gf model. Currently only single GF model, not combinedGradientForest
 #' @param gf_grid_sites integer vector, length is nrow(gf$Y). Maps between sample sites from the GF object to grid cells by row number
 #' @param env_grid environmental data in original units.
-#'
+#' @param spatial_vars character vector specifying column names for spatial location of grid cells
 #' @param k_range integer vector, cluster values to fit
 #' @param reps integer, number of fitting repetitions for each entry in k_range
 #' @param pow compression power for extrapolation, between 0 (capping) and 1 (linear). For example, 0.5 giver square root, 0.25 gives 4th root.
@@ -381,10 +381,10 @@ gf_mvpart <- function(gf){
 #' is_parallel <- FALSE
 #' pow <- 0.25
 #' set.seed(1000)
-#' test <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow)
+#' test <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, spatial_vars = c(""), k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow)
 #' testthat::expect_named(test, c("mvpart", "clust_list"))
 #'
-#' testthat::expect_error(test <- gf_clust_f_ratio(gf = f1, gf_grid_sites = 1:10, env_grid = env_grid, k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow),
+#' testthat::expect_error(test <- gf_clust_f_ratio(gf = f1, gf_grid_sites = 1:10, env_grid = env_grid, spatial_vars = c(""), k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow),
 #' "length(gf_grid_sites) not equal to nrow(gf$Y)", fixed = TRUE)
 #'
 #'
@@ -395,12 +395,12 @@ gf_mvpart <- function(gf){
 #' testthat::expect_true(all(sapply(test$clust_list, function(x){class(x) == c("clara", "partition")} )))
 #' testthat::expect_equal(class(test$mvpart), c("factor") )
 #' set.seed(1000)
-#' test2 <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow*0.5)
+#' test2 <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, spatial_vars = c(""), k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow*0.5)
 #' #testthat::expect_true(test$clust_list[[1]]$anova$f_ratio != test2$clust_list[[1]]$anova$f_ratio)
 #'
 #' #Adjust clara fittings
 #' set.seed(1000)
-#' test3 <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, k_range = k_range, reps =  reps+2, is_parallel = is_parallel, pow = pow,
+#' test3 <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, spatial_vars = c(""), k_range = k_range, reps =  reps+2, is_parallel = is_parallel, pow = pow,
 #' clara_args = list(samples = 20, sampsize = 50, trace = 0, rngR = TRUE, pamLike = TRUE, correct.d = TRUE))
 #'
 #' #Extract f-ratios per k into long form
@@ -422,6 +422,7 @@ gf_mvpart <- function(gf){
 gf_clust_f_ratio <- function(gf,
                              gf_grid_sites,
                              env_grid,
+                             spatial_vars,
                              k_range,
                              reps = 1,
                              is_parallel = TRUE,
@@ -429,8 +430,6 @@ gf_clust_f_ratio <- function(gf,
                              gf_predict_args = list(),
                              clara_args = list()){
   assertthat::assert_that(length(gf_grid_sites) == nrow(gf$Y))
-
-  spatial_vars <- names(gf_grid_sites)
 
   #Predict + compress
 
@@ -675,7 +674,7 @@ cluster_range <- function(x, k, reps = 1, is_parallel = TRUE, ...) {
 #'
 #' #Adjust clara fittings
 #'
-#' test3 <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow,
+#' test3 <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, spatial_vars = c(""), k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow,
 #' clara_args = list(samples = 20, sampsize = 50, trace = 0, rngR = TRUE, pamLike = TRUE, correct.d = TRUE))
 #'
 #'

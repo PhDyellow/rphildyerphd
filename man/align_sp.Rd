@@ -55,7 +55,7 @@ testthat::expect_error(align_sp(valid_data,  fun = notafun)  , "object 'notafun'
 
 #Align to grid
 x <- data.frame(lat = c(0.1, .14, .26, 0.2, 0.35), lon = c(0.1, 0.2, 0.26, .14, 0.45), val_x = 1:5)
-browser()
+
 testthat::expect_equal(align_sp(x,spatial_cols =  c("lat", "lon"), res = target_res, grid_offset = target_offset, fun = mean),
    data.frame(lat = c(0.1, .1, 0.2, .3, 0.3), lon = c(0.1, 0.2, .1, 0.3, 0.4), val_x =  c(1,2,4,3,5)))
 
