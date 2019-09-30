@@ -5,7 +5,7 @@
 \title{Align and join spatial data to a regular grid}
 \usage{
 align_merge_sp(x, y, spatial_cols = c("lat", "lon"), res = 1,
-  offset = 0, fun = mean, ..., agg_x = TRUE, agg_y = TRUE)
+  grid_offset = 0, fun = mean, ..., agg_x = TRUE, agg_y = TRUE)
 }
 \arguments{
 \item{x}{first data.frame to merge}
@@ -16,7 +16,7 @@ align_merge_sp(x, y, spatial_cols = c("lat", "lon"), res = 1,
 
 \item{res}{numeric. target grid resolution}
 
-\item{offset}{numeric. target grid offset}
+\item{grid_offset}{numeric. target grid offset}
 
 \item{fun}{function, applied to data that falls in the same grid cell}
 
@@ -27,7 +27,11 @@ align_merge_sp(x, y, spatial_cols = c("lat", "lon"), res = 1,
 \item{agg_y}{if FALSE, do not aggregate y}
 }
 \value{
-A data.frame. Each row has a unique lat and lon, duplicates are aggregated by fun. All other columns from x and y are included.
+list:
+merged: A data.frame. Each row has a unique lat and lon, duplicates are aggregated by fun. All other columns from x and y are included.
+X: processed X data.frame before merge
+Y: processed Y data.frame before merge
+mapping: integer vector mapping from X to Y, after aggregation but before merging
 }
 \description{
 Takes two data.frames, each with lat and lon (or an equivalent spatial grid),
@@ -64,8 +68,8 @@ testthat::expect_error(align_merge_sp(valid_data[,2:3],  valid_data)  , "x does 
 testthat::expect_error(align_merge_sp(valid_data,  valid_data[,2:3])  , "y does not have all of these name(s): 'lat', 'lon'",  fixed = TRUE)
 testthat::expect_error(align_merge_sp(valid_data,  valid_data, res = "a")  , "res is not a numeric or integer vector",  fixed = TRUE)
 testthat::expect_error(align_merge_sp(valid_data,  valid_data, res = c(1,2))  , "length(res) not equal to 1",  fixed = TRUE)
-testthat::expect_error(align_merge_sp(valid_data,  valid_data, offset = "a")  , "offset is not a numeric or integer vector",  fixed = TRUE)
-testthat::expect_error(align_merge_sp(valid_data,  valid_data, offset = c(1,2))  , "length(offset) not equal to 1",  fixed = TRUE)
+testthat::expect_error(align_merge_sp(valid_data,  valid_data, grid_offset = "a")  , "grid_offset is not a numeric or integer vector",  fixed = TRUE)
+testthat::expect_error(align_merge_sp(valid_data,  valid_data, grid_offset = c(1,2))  , "length(grid_offset) not equal to 1",  fixed = TRUE)
 testthat::expect_error(align_merge_sp(valid_data,  valid_data, fun = notafun)  , "object 'notafun' not found",  fixed = TRUE)
 testthat::expect_error(align_merge_sp(valid_data,  valid_data, fun = setdiff)  , "argument \\"y\\" is missing, with no default", fixed = TRUE) #fun is not an aggregator function
 
@@ -74,47 +78,47 @@ testthat::expect_error(align_merge_sp(valid_data,  valid_data, fun = setdiff)  ,
 #Align to grid
 x <- data.frame(lat = c(0.1, .14, .26, 0.2, 0.35), lon = c(0.1, 0.2, 0.26, .14, 0.45), val_x = 1:5)
 
-testthat::expect_equal(align_merge_sp(x,x,spatial_cols =  c("lat", "lon"), res = target_res, offset = target_offset, fun = mean),
+testthat::expect_equal(align_merge_sp(x,x,spatial_cols =  c("lat", "lon"), res = target_res, grid_offset = target_offset, fun = mean),
    data.frame(lat = c(0.1, .1, 0.2, .3, 0.3), lon = c(0.1, 0.2, .1, 0.3, 0.4), val_x.x = c(1,2,4,3,5), val_x.y =  c(1,2,4,3,5)))
 
 #Alternative spatial_cols
 sp_test <- data.frame(latitude = c(0.1, .14, .26, 0.2, 0.35), longitude = c(0.1, 0.2, 0.26, .14, 0.45), val_x = 1:5)
 
-testthat::expect_equal(align_merge_sp(sp_test,sp_test,spatial_cols =  c("latitude", "longitude"), res = target_res, offset = target_offset, fun = mean),
+testthat::expect_equal(align_merge_sp(sp_test,sp_test,spatial_cols =  c("latitude", "longitude"), res = target_res, grid_offset = target_offset, fun = mean),
    data.frame(latitude = c(0.1, .1, 0.2, .3, 0.3), longitude = c(0.1, 0.2, .1, 0.3, 0.4), val_x.x = c(1,2,4,3,5), val_x.y = c(1,2,4,3,5)))
 
 
 #Aggregate function
 y <- data.frame(lat = c(0.1, .14, .16, 0.2), lon = c(0.1, 0.14, 0.16, .2), val_y = 6:9)
 
-testthat::expect_equal(align_merge_sp(y,y,spatial_cols =  c("lat", "lon"), res = target_res, offset = target_offset, fun = mean),
+testthat::expect_equal(align_merge_sp(y,y,spatial_cols =  c("lat", "lon"), res = target_res, grid_offset = target_offset, fun = mean),
    data.frame(lat = c(0.1, .2), lon = c(0.1, .2), val_y.x = c(6.5, 8.5), val_y.y =  c(6.5, 8.5)))
 
 #Merge data.frames
 
 z <- data.frame(lat = c(0.1, .14, .2, 0.26, 0.35), lon = c(0.1, 0.2, 0.14, .26, 0.45), val_z = 11:15)
 
-testthat::expect_equal(align_merge_sp(x,z,spatial_cols =  c("lat", "lon"), res = target_res, offset = target_offset, fun = mean),
+testthat::expect_equal(align_merge_sp(x,z,spatial_cols =  c("lat", "lon"), res = target_res, grid_offset = target_offset, fun = mean),
    data.frame(lat = c(0.1, .1, 0.2, .3, 0.3), lon = c(0.1, 0.2, .1, 0.3, 0.4), val_x = c(1,2,4,3,5), val_z =  11:15))
 
 #MAggregate and merge
 
 y2 <- data.frame(lat = c(0.1, .14, .16, 0.2), lon = c(0.1, 0.14, 0.16, .2), val_y2 = 16:19)
 
-testthat::expect_equal(align_merge_sp(y,y2,spatial_cols =  c("lat", "lon"), res = target_res, offset = target_offset, fun = mean),
+testthat::expect_equal(align_merge_sp(y,y2,spatial_cols =  c("lat", "lon"), res = target_res, grid_offset = target_offset, fun = mean),
    data.frame(lat = c(0.1, .2), lon = c(0.1, .2), val_y = c(6.5, 8.5), val_y2 =  c(16.5, 18.5)))
 
 #Merge without aggregate
 
 x2 <- data.frame(lat = c(0.1, .14), lon = c(0.1, .14), val_x = 1:2)
 
-testthat::expect_equal(align_merge_sp(x2,x2,spatial_cols =  c("lat", "lon"), res = target_res, offset = target_offset, fun = mean),
+testthat::expect_equal(align_merge_sp(x2,x2,spatial_cols =  c("lat", "lon"), res = target_res, grid_offset = target_offset, fun = mean),
    data.frame(lat = c(0.1), lon = c(0.1), val_x.x = c(1.5), val_x.y =  c(1.5)))
-testthat::expect_equal(align_merge_sp(x2,x2,spatial_cols =  c("lat", "lon"), res = target_res, offset = target_offset, fun = mean, agg_x = FALSE),
+testthat::expect_equal(align_merge_sp(x2,x2,spatial_cols =  c("lat", "lon"), res = target_res, grid_offset = target_offset, fun = mean, agg_x = FALSE),
    data.frame(lat = c(0.1, 0.1), lon = c(0.1, 0.1), val_x.x = c(1,2), val_x.y =  c(1.5,1.5)))
-testthat::expect_equal(align_merge_sp(x2,x2,spatial_cols =  c("lat", "lon"), res = target_res, offset = target_offset, fun = mean, agg_y = FALSE),
+testthat::expect_equal(align_merge_sp(x2,x2,spatial_cols =  c("lat", "lon"), res = target_res, grid_offset = target_offset, fun = mean, agg_y = FALSE),
    data.frame(lat = c(0.1, 0.1), lon = c(0.1, 0.1), val_x.x = c(1.5, 1.5), val_x.y =  c(1,2)))
-testthat::expect_equal(align_merge_sp(x2,x2,spatial_cols =  c("lat", "lon"), res = target_res, offset = target_offset, fun = mean, agg_x = FALSE, agg_y = FALSE),
+testthat::expect_equal(align_merge_sp(x2,x2,spatial_cols =  c("lat", "lon"), res = target_res, grid_offset = target_offset, fun = mean, agg_x = FALSE, agg_y = FALSE),
    data.frame(lat = rep(0.1, 4), lon = rep(0.1, 4), val_x.x = rep(c(1, 2), each = 2), val_x.y =  rep(c(1,2), 2)))
 
 }

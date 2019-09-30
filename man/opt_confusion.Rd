@@ -33,8 +33,7 @@ f2 <- gradientForest(data.frame(Ysimulation,Xsimulation), preds, specs[1:6+6], n
 f12 <- combinedGradientForest(west=f1,east=f2)
 
 env_grid <- f1$X
-env_grid$site_id <- 1:nrow(env_grid)
-gf_grid_sites <- data.frame(site_id = 1:nrow(f1$Y))
+gf_grid_sites <- 1:nrow(f1$Y)
 k_range <- 2:10
 reps <- 1
 is_parallel <- FALSE
@@ -54,15 +53,12 @@ env_trans <- do.call("gf_extrap_compress", c(list(gf = f1, env_grid = env_grid[!
 
 #reattach spatial data
 env_trans <- cbind(env_grid[names(env_grid) \%in\% spatial_vars], env_trans)
-
-clara_clust <- merge(data.frame(env_trans[, spatial_vars, drop = FALSE], clust = test3$clust_list[[3]]$clustering), gf_grid_sites, by = "site_id")
-node_clara <- merge(data.frame(site_id = gf_grid_sites, leaf = test3$mvpart), clara_clust, by = "site_id")
+node_clara <- data.frame(leaf = test3$mvpart, clust = test3$clust_list[[3]]$clustering[gf_grid_sites])
 opt_test <- rphildyerphd:::opt_confusion(as.numeric(node_clara$leaf), node_clara$clust)
 #Extract f-ratios per k into long form
 set.seed(1000)
 opt_test2 <- lapply(test3$clust_list, mvpart = test3$mvpart, function(clust, mvpart){
-  clara_clust <- merge(data.frame(env_trans[, spatial_vars, drop = FALSE], clust = clust$clustering), gf_grid_sites, by = "site_id")
-  node_clara <- merge(data.frame(site_id = gf_grid_sites, leaf = mvpart), clara_clust, by = "site_id")
+  node_clara <- data.frame(leaf = test3$mvpart, clust = clust$clustering[gf_grid_sites])
   return(rphildyerphd:::opt_confusion(as.numeric(node_clara$leaf), node_clara$clust))
 })
 

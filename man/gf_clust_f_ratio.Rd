@@ -4,17 +4,16 @@
 \alias{gf_clust_f_ratio}
 \title{F-ratio over many clusterings}
 \usage{
-gf_clust_f_ratio(gf, gf_grid_sites, env_grid = gf$X, k_range, reps = 1,
+gf_clust_f_ratio(gf, gf_grid_sites, env_grid, k_range, reps = 1,
   is_parallel = TRUE, pow = 0.25, gf_predict_args = list(),
   clara_args = list())
 }
 \arguments{
 \item{gf}{a gf model. Currently only single GF model, not combinedGradientForest}
 
-\item{gf_grid_sites}{data.frame, same number of rows as gf$Y. Columns are keys from env_grid that map each gf sample to a grid cell. These columns will be excluded from transformation.
-Usually lat,lon or a grid id. See examples if rows are already aligned.}
+\item{gf_grid_sites}{integer vector, length is nrow(gf$Y). Maps between sample sites from the GF object to grid cells by row number}
 
-\item{env_grid}{environmental data in original units. Must have columns with the same names as gf_grid_sites for matching grid cells to biological samples.}
+\item{env_grid}{environmental data in original units.}
 
 \item{k_range}{integer vector, cluster values to fit}
 
@@ -23,6 +22,8 @@ Usually lat,lon or a grid id. See examples if rows are already aligned.}
 \item{pow}{compression power for extrapolation, between 0 (capping) and 1 (linear). For example, 0.5 giver square root, 0.25 gives 4th root.}
 
 \item{gf_predict_args}{list of additional arguments to predict.gradientForest}
+
+\item{clara_args}{list of additional arguments to cluster::clara}
 
 \item{parallel}{TRUE/FALSE Run in parallel. Assumes a foreach registerDo* backend has been defined.}
 }
@@ -57,8 +58,7 @@ f2 <- gradientForest(data.frame(Ysimulation,Xsimulation), preds, specs[1:6+6], n
 f12 <- combinedGradientForest(west=f1,east=f2)
 
 env_grid <- f1$X
-env_grid$site_id <- 1:nrow(env_grid)
-gf_grid_sites <- data.frame(site_id = 1:nrow(f1$Y))
+gf_grid_sites <- 1:nrow(f1$Y)
 k_range <- 2:10
 reps <- 1
 is_parallel <- FALSE
@@ -67,7 +67,13 @@ set.seed(1000)
 test <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow)
 testthat::expect_named(test, c("mvpart", "clust_list"))
 
+testthat::expect_error(test <- gf_clust_f_ratio(gf = f1, gf_grid_sites = 1:10, env_grid = env_grid, k_range = k_range, reps =  reps, is_parallel = is_parallel, pow = pow),
+"length(gf_grid_sites) not equal to nrow(gf$Y)", fixed = TRUE)
+
+
 testthat::expect_equal(length(test$clust_list), length(k_range)*reps)
+
+
 
 testthat::expect_true(all(sapply(test$clust_list, function(x){class(x) == c("clara", "partition")} )))
 testthat::expect_equal(class(test$mvpart), c("factor") )
@@ -91,17 +97,6 @@ plot(f_ratio_test)
 testthat::expect_equal(sapply(test3$clust_list, function(clust){clust$conf$score}),
                  c(29, 40, 48, 55, 66, 76, 87, 85, 86, 29, 40, 48, 55, 67, 75, 86, 86, 87, 29, 40, 48, 55, 66, 75, 86, 87, 87))
 
-#chech tolerance to mapping vars
-env_grid <- f1$X
-env_grid$site_idd <- 1:nrow(env_grid)
-gf_grid_sites <- data.frame(site_idd = 1:nrow(f1$Y))
-set.seed(1000)
-test4 <- gf_clust_f_ratio(gf = f1, gf_grid_sites = gf_grid_sites, env_grid = env_grid, k_range = k_range, reps =  reps+2, is_parallel = is_parallel, pow = pow,
-clara_args = list(samples = 20, sampsize = 50, trace = 0, rngR = TRUE, pamLike = TRUE, correct.d = TRUE))
-
-testthat::expect_equal( f_ratio_test,  do.call(rbind, lapply(test4$clust_list, function(clust){
-  return(data.frame(k = clust$anova$cluster, f_ratio = clust$anova$f_ratio))
-})))
 
 }
 
