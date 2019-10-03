@@ -256,6 +256,7 @@ compress_extrap_z <- function(x, p, a, b){
 #' Apply an MVPART analysis to a dataset that is also being passed to Gradient Forest
 #'
 #' @param gf A GF model, not a combined GF model though
+#' @param mvpart_args argument list to mvpart::mvpart
 #'
 #' @return factor mapping between leaf nodes and samples sites. Each entry is a sample site, each level is a leaf node.
 #'
@@ -297,7 +298,15 @@ compress_extrap_z <- function(x, p, a, b){
 #' testthat::expect_error(gf_mvpart(gf3), "class(gf)[1] not equal to \"gradientForest\"", fixed = TRUE)
 #' }
 
-gf_mvpart <- function(gf){
+gf_mvpart <- function(gf,
+                      mvpart_args = list(xv=c("1se", "min")[1],
+                                             xval=10,
+                                             xvmult=10,
+                                             xvse=1,
+                                             plot.add=FALSE,
+                                             text.add=FALSE,
+                                             pretty=FALSE)
+                      ){
   assertthat::assert_that(assertthat::are_equal(class(gf)[1], "gradientForest"))
 
   x <- gf$X
@@ -311,15 +320,8 @@ gf_mvpart <- function(gf){
   y <- y[,spp]
   y <- as.matrix(y)
 
-  mvp <- mvpart::mvpart(y ~ .,
-                x,
-                xv=c("1se", "min")[1],
-                xval=10,
-                xvmult=10,
-                xvse=1,
-                plot.add=FALSE,
-                text.add=FALSE,
-                pretty=FALSE)
+  mvp <- do.call(mvpart::mvpart, c(list(form = formula("y ~ ."),  data = x), mvpart_args))
+
 
   #only terminal nodes appear in mvp$where, but other nodes occupy id slots leading to "missing" id numbers
   #relevel to avoid confusion over "missing" nodes by end users
