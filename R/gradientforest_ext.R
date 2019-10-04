@@ -468,6 +468,167 @@ gf_clust_f_ratio <- function(gf,
 
 }
 
+#' Collection of GF models F-ratio
+#'
+#' This function is a collection of actions:
+#' 1. Get a list of GF objects to estimate k
+#' 2. Combine the GF objects
+#' 3. transform env using combined GF
+#' 4. Cluster all possible values
+#' 5. Given that cluster, calculate F-ratio for each individual GF object for each k
+#' 6. Show all f-ratios, and create average, possibly weighted
+#' 7. Show all confusion matrix scores, possibly weighted ()
+#' 7. Also show mvpart suggestions for each individual GF object
+#'
+#' @param gf_list list of gradient Forest models. Each element must be named
+#' @param combine_args list of additional arguments to combinedGradientForest
+#' @param env_grid data.frame of environmental conditions
+#' @param spatial_vars character vector specifying columns in env_data that give spatial location rather than predictors
+#' @param gf_predict_args list of addidional arguments to predict.combinedGradientForest
+#' @param extrap_pow compression for Gradient Forest extrapolation. 0 for capping, 1 for linear, (0,1) for compression
+#' @param gf_sites list, one entry per GF object, mapping from each sample site to a row in env_data. Each element must be named to match gf_list
+#' @param k_range integer vector of cluster k values to fit
+#' @param clara_args list of arguments to pass to cluster::clara
+#' @param mvpart_args list of arguments to pass to mvpart::mvpart
+#'
+#'
+#' @return list of gf_combined object, clusterings, long data.frame with all results:
+#' for each gf_oject (including mean) and k: fratio, confusion matrix, mvpart (duplicated for each k and sum for mean)
+#'
+#' @examples
+#'
+#'
+#' if (requireNamespace("gradientForest", quietly = TRUE)) {
+#' library(gradientForest) #required to attach extendedForest
+#'
+#' k_range <- 3:5
+#'
+#' data(CoMLsimulation)
+#' preds <- colnames(Xsimulation)
+#' specs <- colnames(Ysimulation)
+#' f1 <- gradientForest(data.frame(Ysimulation,Xsimulation), preds, specs[1:6], ntree=10)
+#' f2 <- gradientForest(data.frame(Ysimulation,Xsimulation), preds, specs[1:6+6], ntree=10)
+#' f_list <- list(west = f1, east = f2)
+#' mapping <-list(west = 1:nrow(Xsimulation), east= 1:nrow(Xsimulation))
+#' set.seed(1000)
+#' f12 <- combinedGradientForest(west=f1,east=f2, standardize = c("before", "after")[2])
+#'
+#' extrap_pow <- 0.25
+#' combined_args <- list(standardize = c("before", "after")[2])
+#' combine_m <- 0
+#' combine_w <- 0
+#' fratio_m <-
+#' fratio_w <-
+#' mvpart_args <- list(xv=c("1se", "min")[1],
+#'   xval=10,
+#'   xvmult=10,
+#'   xvse=1,
+#'   plot.add=FALSE,
+#'   text.add=FALSE,
+#'   pretty=FALSE)
+#' set.seed(1000)
+#' f_com <- rphildyerphd:::gf_clust_opt(gf_list =f_list, combined_args = combined_args, env_grid = Xsimulation, spatial_vars = c(),
+#'                     gf_predict_args = list(), extrap_pow = extrap_pow, gf_sites = mapping, k_range = k_range,
+#'                     clara_args = list(), combine_m,combine_w, fratio_m, fratio_w, mvpart_args)
+#' testthat::expect_equal(class(f_com$gf_combined), c("combinedGradientForest", "list"))
+#'
+#' testthat::expect_equal(predict(f_com$gf_combined), predict(f12))
+#'
+#' testthat::expect_named(f_com, c("gf_combined", "clust", "gf_stats"))
+#'
+#' testthat::expect_equal(class(f_com$clust[[1]]), c("clara", partition"))
+#' testthat::expect_equal(length(f_com$clust), length(k_range))
+#'
+#' testthat::expect_equal(nrow(f_com$gf_stats), length(k_range) * length(f_list))
+#' testthat::expect_named(f_com$gf_stats, c("gf_name", "k", "var_model", "var_resid","f_ratio", "p_value", "cluster", "inertia_exp", "mvpart_k", "confusion"))
+#'
+#'
+#' }
+gf_clust_opt <- function(gf_list,
+                          combined_args = list(standardize = c("before", "after")[2]),
+                         env_grid,
+                         spatial_vars,
+                         gf_predict_args,
+                         extrap_pow,
+                         gf_sites,
+                         k_range,
+                         cluster_parallel = FALSE,
+                         clara_args,
+                         mvpart_args = list(xv=c("1se", "min")[1],
+                                               xval=10,
+                                               xvmult=10,
+                                               xvse=1,
+                                               plot.add=FALSE,
+                                               text.add=FALSE,
+                                               pretty=FALSE)
+                          ){
+
+  assertthat::assert_that(is.integer(k_range))
+  assertthat::assert_that(all(names(gf_list) != ""))
+  assertthat::assert_that(all(names(gf_sites) != ""))
+  assertthat::assert_that(all(names(gf_list) == names(gf_sites)))
+  assertthat::assert_that(class(gf_predict_args) ==   "list")
+  assertthat::assert_that(class(clara_args) ==   "list")
+  assertthat::assert_that(class(mvpart_args) ==   "list")
+
+
+
+  gf_combined <- do.call(gradientForest::combinedGradientForest, c(gf_list, combined_args))
+
+  #Predict + compress
+
+  env_trans <- do.call("gf_extrap_compress", c(list(gf = gf_combined, env_grid = env_grid[!names(env_grid) %in% spatial_vars], pow = extrap_pow), gf_predict_args))
+
+  #reattach spatial data
+  env_trans <- cbind(env_grid[names(env_grid) %in% spatial_vars], env_trans)
+
+  #Cluster
+  #reps is always 1, if the user wants repetition, then include it in k_range.
+  cluster_list <- do.call("cluster_range", c(list(x = env_trans[, !names(env_trans) %in% spatial_vars],
+                                                  k = k_range, is_parallel = cluster_parallel), clara_args))
+
+  #Calculate f-ratio, mvpart and confusion per gf object, per clustering
+  gf_k_grid <- expand.grid(gf_name = names(gf_list), clust = 1:length(cluster_list))
+
+
+  gf_stats_list <- lapply(1:nrow(gf_k_grid), gf_k_grid = gf_k_grid,
+                          gf_list = gf_list,
+                          cluster_list = cluster_list,
+                          mvpart_args = mvpart_args,
+                          function(r, gf_k_grid, gf_list, cluster_list, mvpart_args){
+    gf_name <-  gf_k_grid[r, "gf_name"]
+    gf <- gf_list[[gf_name]]
+    clust <- cluster_list[[gf_k_grid[[r, "clust"]] ]]
+    k <- length(clust$i.med)
+
+    ret <- data.frame(gf_name = gf_name, k = k, clust_ind = r)
+    #f-ratio
+
+    ret <- cbind(ret, gf_anova(gf, k, clust$clustering[gf_sites[[gf_name]]]))
+
+    #mvpart
+    pdf(file = NULL)
+    mvpart_result <- gf_mvpart(gf, mvpart_args)
+    dev.off()
+    ret$mvpart_k <- nlevels(mvpart_result)
+
+    #conf_matrix
+    confusion <- opt_confusion(mvpart_result, clust$clustering[gf_sites[[gf_name]]])
+    ret$confusion <- confusion$score
+    return(ret)
+
+  })
+
+
+  gf_stats <- do.call(rbind, gf_stats_list)
+
+  return(list(gf_combined = gf_combined,
+              clust = cluster_list,
+              gf_stats = gf_stats))
+}
+
+
+
 
 #' Gradient Forest Clustering F-ratio
 #'

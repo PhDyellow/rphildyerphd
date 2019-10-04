@@ -4,10 +4,14 @@
 \alias{gf_mvpart}
 \title{Gradient Forest MVPART}
 \usage{
-gf_mvpart(gf)
+gf_mvpart(gf, mvpart_args = list(xv = c("1se", "min")[1], xval = 10,
+  xvmult = 10, xvse = 1, plot.add = FALSE, text.add = FALSE, pretty =
+  FALSE))
 }
 \arguments{
 \item{gf}{A GF model, not a combined GF model though}
+
+\item{mvpart_args}{argument list to mvpart::mvpart}
 }
 \value{
 factor mapping between leaf nodes and samples sites. Each entry is a sample site, each level is a leaf node.
