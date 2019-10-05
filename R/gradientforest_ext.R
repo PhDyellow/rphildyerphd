@@ -529,18 +529,18 @@ gf_clust_f_ratio <- function(gf,
 #' set.seed(1000)
 #' f_com <- rphildyerphd:::gf_clust_opt(gf_list =f_list, combined_args = combined_args, env_grid = Xsimulation, spatial_vars = c(),
 #'                     gf_predict_args = list(), extrap_pow = extrap_pow, gf_sites = mapping, k_range = k_range,
-#'                     clara_args = list(), combine_m,combine_w, fratio_m, fratio_w, mvpart_args)
+#'                     clara_args = list(), mvpart_args = mvpart_args)
 #' testthat::expect_equal(class(f_com$gf_combined), c("combinedGradientForest", "list"))
 #'
 #' testthat::expect_equal(predict(f_com$gf_combined), predict(f12))
 #'
 #' testthat::expect_named(f_com, c("gf_combined", "clust", "gf_stats"))
 #'
-#' testthat::expect_equal(class(f_com$clust[[1]]), c("clara", partition"))
+#' testthat::expect_equal(class(f_com$clust[[1]]), c("clara", "partition"))
 #' testthat::expect_equal(length(f_com$clust), length(k_range))
 #'
 #' testthat::expect_equal(nrow(f_com$gf_stats), length(k_range) * length(f_list))
-#' testthat::expect_named(f_com$gf_stats, c("gf_name", "k", "var_model", "var_resid","f_ratio", "p_value", "cluster", "inertia_exp", "mvpart_k", "confusion"))
+#' testthat::expect_named(f_com$gf_stats, c("gf_name", "k", "clust_ind", "var_model", "var_resid","f_ratio", "p_value", "cluster", "inertia_exp", "mvpart_k", "confusion"))
 #'
 #'
 #' }
@@ -605,7 +605,6 @@ gf_clust_opt <- function(gf_list,
     #f-ratio
 
     ret <- cbind(ret, gf_anova(gf, k, clust$clustering[gf_sites[[gf_name]]]))
-
     #mvpart
     pdf(file = NULL)
     mvpart_result <- gf_mvpart(gf, mvpart_args)

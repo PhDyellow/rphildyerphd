@@ -46,3 +46,53 @@ This function is a collection of actions:
 7. Show all confusion matrix scores, possibly weighted ()
 7. Also show mvpart suggestions for each individual GF object
 }
+\examples{
+
+
+if (requireNamespace("gradientForest", quietly = TRUE)) {
+library(gradientForest) #required to attach extendedForest
+
+k_range <- 3:5
+
+data(CoMLsimulation)
+preds <- colnames(Xsimulation)
+specs <- colnames(Ysimulation)
+f1 <- gradientForest(data.frame(Ysimulation,Xsimulation), preds, specs[1:6], ntree=10)
+f2 <- gradientForest(data.frame(Ysimulation,Xsimulation), preds, specs[1:6+6], ntree=10)
+f_list <- list(west = f1, east = f2)
+mapping <-list(west = 1:nrow(Xsimulation), east= 1:nrow(Xsimulation))
+set.seed(1000)
+f12 <- combinedGradientForest(west=f1,east=f2, standardize = c("before", "after")[2])
+
+extrap_pow <- 0.25
+combined_args <- list(standardize = c("before", "after")[2])
+combine_m <- 0
+combine_w <- 0
+fratio_m <-
+fratio_w <-
+mvpart_args <- list(xv=c("1se", "min")[1],
+  xval=10,
+  xvmult=10,
+  xvse=1,
+  plot.add=FALSE,
+  text.add=FALSE,
+  pretty=FALSE)
+set.seed(1000)
+f_com <- rphildyerphd:::gf_clust_opt(gf_list =f_list, combined_args = combined_args, env_grid = Xsimulation, spatial_vars = c(),
+                    gf_predict_args = list(), extrap_pow = extrap_pow, gf_sites = mapping, k_range = k_range,
+                    clara_args = list(), mvpart_args = mvpart_args)
+testthat::expect_equal(class(f_com$gf_combined), c("combinedGradientForest", "list"))
+
+testthat::expect_equal(predict(f_com$gf_combined), predict(f12))
+
+testthat::expect_named(f_com, c("gf_combined", "clust", "gf_stats"))
+
+testthat::expect_equal(class(f_com$clust[[1]]), c("clara", "partition"))
+testthat::expect_equal(length(f_com$clust), length(k_range))
+
+testthat::expect_equal(nrow(f_com$gf_stats), length(k_range) * length(f_list))
+testthat::expect_named(f_com$gf_stats, c("gf_name", "k", "clust_ind", "var_model", "var_resid","f_ratio", "p_value", "cluster", "inertia_exp", "mvpart_k", "confusion"))
+
+
+}
+}
