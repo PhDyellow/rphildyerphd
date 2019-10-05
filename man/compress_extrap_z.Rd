@@ -94,6 +94,6 @@ testthat::expect_error(rphildyerphd:::compress_extrap_z(x = seq(-1, 1, 0.1), p, 
 
 z <- rphildyerphd:::compress_extrap_z(x, p, a, b)
 pl_all <- data.frame(x = x, y = a*x+b, z = z, cap = b)
-matplot(pl_all$x, pl_all[,c("y","z", "cap")])
+matplot(pl_all$x, pl_all[,c("y","z", "cap")], type = "l")
 
 }
