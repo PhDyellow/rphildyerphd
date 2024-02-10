@@ -4,8 +4,7 @@
 \alias{align_sp}
 \title{Align data.frame to a grid}
 \usage{
-align_sp(x, spatial_cols = c("lat", "lon"), res = 1, grid_offset = 0,
-  fun, ...)
+align_sp(x, spatial_cols = c("lat", "lon"), res = 1, grid_offset = 0, fun, ...)
 }
 \arguments{
 \item{x}{Data.frame of input data}
@@ -45,7 +44,7 @@ spatial_cols <- c("lat", "lon")
 #Parameters are checked
 invalid_data <- cluster::clara(cluster::xclara, 5)
 valid_data <- data.frame(lat = 1:5, lon = 1:5, val = 1:5)
-testthat::expect_error(align_sp(invalid_data), "cannot coerce class ‘c(\\"clara\\", \\"partition\\")’ to a data.frame", fixed = TRUE)
+testthat::expect_error(align_sp(invalid_data), "cannot coerce class ‘c(\"clara\", \"partition\")’ to a data.frame", fixed = TRUE)
 testthat::expect_error(align_sp(valid_data[,2:3],  spatial_cols)  , "x does not have all of these name(s): 'lat', 'lon'",  fixed = TRUE)
 testthat::expect_error(align_sp(valid_data,  res = "a")  , "res is not a numeric or integer vector",  fixed = TRUE)
 testthat::expect_error(align_sp(valid_data,   res = c(1,2))  , "length(res) not equal to 1",  fixed = TRUE)

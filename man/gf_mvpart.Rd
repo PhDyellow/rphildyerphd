@@ -4,9 +4,11 @@
 \alias{gf_mvpart}
 \title{Gradient Forest MVPART}
 \usage{
-gf_mvpart(gf, mvpart_args = list(xv = c("1se", "min")[1], xval = 10,
-  xvmult = 10, xvse = 1, plot.add = FALSE, text.add = FALSE, pretty =
-  FALSE))
+gf_mvpart(
+  gf,
+  mvpart_args = list(xv = c("1se", "min")[1], xval = 10, xvmult = 10, xvse = 1, plot.add
+    = FALSE, text.add = FALSE, pretty = FALSE)
+)
 }
 \arguments{
 \item{gf}{A GF model, not a combined GF model though}
@@ -52,6 +54,6 @@ gf3 <- gradientForest::combinedGradientForest(west = gf1, east = gf2)
 #The returned object is not trivial or easy to construct in other ways, so testing with hash functions.
 testthat::expect_known_hash(gf_mvpart(gf1), "0b7d05ed")
 testthat::expect_known_hash(gf_mvpart(gf2), "02c9ba96")
-testthat::expect_error(gf_mvpart(gf3), "class(gf)[1] not equal to \\"gradientForest\\"", fixed = TRUE)
+testthat::expect_error(gf_mvpart(gf3), "class(gf)[1] not equal to \"gradientForest\"", fixed = TRUE)
 }
 }

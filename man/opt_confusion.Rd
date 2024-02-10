@@ -7,7 +7,9 @@
 opt_confusion(x, y)
 }
 \arguments{
-\item{clust_map}{}
+\item{mvpart_map}{mapping by mvpart}
+
+\item{clust_map}{mapping by clust}
 }
 \value{
 list of: best confusion matrix, sum of diagonal of best confusion matrix, data.frame mapping mvpart_map entries to clust_map entries

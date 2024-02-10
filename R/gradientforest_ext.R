@@ -806,8 +806,8 @@ cluster_range <- function(x, k, reps = 1, is_parallel = TRUE, ...) {
 #'
 #' The mvpart leaf node to cluster id mapping is 1 to 1. Any excess nodes or id's will be assigned NA.
 #'
-#' @param mvpart_map
-#' @param clust_map
+#' @param mvpart_map mapping by mvpart
+#' @param clust_map mapping by clust
 #'
 #' @return list of: best confusion matrix, sum of diagonal of best confusion matrix, data.frame mapping mvpart_map entries to clust_map entries
 #'

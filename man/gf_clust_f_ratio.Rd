@@ -4,9 +4,18 @@
 \alias{gf_clust_f_ratio}
 \title{F-ratio over many clusterings}
 \usage{
-gf_clust_f_ratio(gf, gf_grid_sites, env_grid, spatial_vars, k_range,
-  reps = 1, is_parallel = TRUE, pow = 0.25,
-  gf_predict_args = list(), clara_args = list())
+gf_clust_f_ratio(
+  gf,
+  gf_grid_sites,
+  env_grid,
+  spatial_vars,
+  k_range,
+  reps = 1,
+  is_parallel = TRUE,
+  pow = 0.25,
+  gf_predict_args = list(),
+  clara_args = list()
+)
 }
 \arguments{
 \item{gf}{a gf model. Currently only single GF model, not combinedGradientForest}

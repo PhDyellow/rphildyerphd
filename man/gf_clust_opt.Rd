@@ -4,11 +4,20 @@
 \alias{gf_clust_opt}
 \title{Collection of GF models F-ratio}
 \usage{
-gf_clust_opt(gf_list, combined_args = list(standardize = c("before",
-  "after")[2]), env_grid, spatial_vars, gf_predict_args, extrap_pow,
-  gf_sites, k_range, cluster_parallel = FALSE, clara_args,
-  mvpart_args = list(xv = c("1se", "min")[1], xval = 10, xvmult = 10,
-  xvse = 1, plot.add = FALSE, text.add = FALSE, pretty = FALSE))
+gf_clust_opt(
+  gf_list,
+  combined_args = list(standardize = c("before", "after")[2]),
+  env_grid,
+  spatial_vars,
+  gf_predict_args,
+  extrap_pow,
+  gf_sites,
+  k_range,
+  cluster_parallel = FALSE,
+  clara_args,
+  mvpart_args = list(xv = c("1se", "min")[1], xval = 10, xvmult = 10, xvse = 1, plot.add
+    = FALSE, text.add = FALSE, pretty = FALSE)
+)
 }
 \arguments{
 \item{gf_list}{list of gradient Forest models. Each element must be named}

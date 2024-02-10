@@ -4,8 +4,17 @@
 \alias{align_merge_sp}
 \title{Align and join spatial data to a regular grid}
 \usage{
-align_merge_sp(x, y, spatial_cols = c("lat", "lon"), res = 1,
-  grid_offset = 0, fun = mean, ..., agg_x = TRUE, agg_y = TRUE)
+align_merge_sp(
+  x,
+  y,
+  spatial_cols = c("lat", "lon"),
+  res = 1,
+  grid_offset = 0,
+  fun = mean,
+  ...,
+  agg_x = TRUE,
+  agg_y = TRUE
+)
 }
 \arguments{
 \item{x}{first data.frame to merge}
@@ -62,8 +71,8 @@ target_offset <- 0
 #Parameters are checked
 invalid_data <- cluster::clara(cluster::xclara, 5)
 valid_data <- data.frame(lat = 1:5, lon = 1:5, val = 1:5)
-testthat::expect_error(align_merge_sp(invalid_data,  valid_data), "cannot coerce class ‘c(\\"clara\\", \\"partition\\")’ to a data.frame", fixed = TRUE)
-testthat::expect_error(align_merge_sp(valid_data,  invalid_data), "cannot coerce class ‘c(\\"clara\\", \\"partition\\")’ to a data.frame", fixed = TRUE)
+testthat::expect_error(align_merge_sp(invalid_data,  valid_data), "cannot coerce class ‘c(\"clara\", \"partition\")’ to a data.frame", fixed = TRUE)
+testthat::expect_error(align_merge_sp(valid_data,  invalid_data), "cannot coerce class ‘c(\"clara\", \"partition\")’ to a data.frame", fixed = TRUE)
 testthat::expect_error(align_merge_sp(valid_data[,2:3],  valid_data)  , "x does not have all of these name(s): 'lat', 'lon'",  fixed = TRUE)
 testthat::expect_error(align_merge_sp(valid_data,  valid_data[,2:3])  , "y does not have all of these name(s): 'lat', 'lon'",  fixed = TRUE)
 testthat::expect_error(align_merge_sp(valid_data,  valid_data, res = "a")  , "res is not a numeric or integer vector",  fixed = TRUE)
@@ -71,7 +80,7 @@ testthat::expect_error(align_merge_sp(valid_data,  valid_data, res = c(1,2))  , 
 testthat::expect_error(align_merge_sp(valid_data,  valid_data, grid_offset = "a")  , "grid_offset is not a numeric or integer vector",  fixed = TRUE)
 testthat::expect_error(align_merge_sp(valid_data,  valid_data, grid_offset = c(1,2))  , "length(grid_offset) not equal to 1",  fixed = TRUE)
 testthat::expect_error(align_merge_sp(valid_data,  valid_data, fun = notafun)  , "object 'notafun' not found",  fixed = TRUE)
-testthat::expect_error(align_merge_sp(valid_data,  valid_data, fun = setdiff)  , "argument \\"y\\" is missing, with no default", fixed = TRUE) #fun is not an aggregator function
+testthat::expect_error(align_merge_sp(valid_data,  valid_data, fun = setdiff)  , "argument \"y\" is missing, with no default", fixed = TRUE) #fun is not an aggregator function
 
 
 
