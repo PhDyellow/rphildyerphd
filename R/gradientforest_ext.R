@@ -20,8 +20,6 @@
 #'
 #' @return Data.frame of transformed environmental predictors
 #'
-#' @importFrom gradientForest importance.gradientForest importance.combinedGradientForest predict.gradientForest predict.combinedGradientForest
-#'
 #' @export
 #'
 #' @examples
